@@ -1,12 +1,32 @@
-﻿from django.urls import path, include
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from products.views import LoaiXeViewSet, XeViewSet, BlogPostViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role
-from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet, CartViewSet, CartItemViewSet, OrderViewSet, checkout
-from core.views import upload_media
-from analytics.views import doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay
+from api.views import (
+    LoaiXeViewSet,
+    XeViewSet,
+    NhanVienViewSet,
+    KhachHangViewSet,
+    NCCViewSet,
+    HoaDonNhapViewSet,
+    ChiTietHDNViewSet,
+    HoaDonXuatViewSet,
+    ChiTietHDXViewSet,
+    BaoHanhViewSet,
+    AdminViewSet,
+    BlogPostViewSet,
+    CartViewSet,
+    CartItemViewSet,
+    OrderViewSet,
+    checkout,
+    doanh_thu_hom_nay,
+    doanh_thu_thang,
+    tong_xe_da_ban,
+    top_xe_ban_chay,
+    RegisterAPIView,
+    user_role,
+    upload_media,
+)
 
 router = DefaultRouter()
 router.register(r"loaixe", LoaiXeViewSet)
@@ -19,6 +39,7 @@ router.register(r"chitiethdn", ChiTietHDNViewSet)
 router.register(r"hoadonxuat", HoaDonXuatViewSet)
 router.register(r"chitiethdx", ChiTietHDXViewSet)
 router.register(r"baohanh", BaoHanhViewSet)
+router.register(r"adminuser", AdminViewSet)
 router.register(r"blog", BlogPostViewSet)
 router.register(r"cart", CartViewSet, basename="cart")
 router.register(r"cart-item", CartItemViewSet, basename="cart-item")
