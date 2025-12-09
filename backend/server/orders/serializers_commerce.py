@@ -1,6 +1,7 @@
-from rest_framework import serializers
-from orders.models import Cart, CartItem, Order, OrderItem`r`nfrom products.models import Xe
-from .product import XeSerializer
+﻿from rest_framework import serializers
+from cart.commerce_models import Cart, CartItem, Order, OrderItem
+from products.models import Xe
+from products.serializers import XeSerializer
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -60,4 +61,3 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
         ]
         read_only_fields = ["user", "created_at", "total_price", "payment_status"]
-

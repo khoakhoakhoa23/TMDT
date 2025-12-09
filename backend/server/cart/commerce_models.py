@@ -1,6 +1,6 @@
 from django.db import models
 
-from .product import Xe
+from products.models import Xe
 
 
 class Cart(models.Model):

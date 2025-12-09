@@ -1,26 +1,27 @@
-from django.core.management.base import BaseCommand
+﻿from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
-from api.models import LoaiXe, Xe, BlogPost, Order, OrderItem
+from products.models import LoaiXe, Xe, BlogPost
+from orders.models import Order, OrderItem
 
 
 class Command(BaseCommand):
-    help = "Seed dữ liệu demo (loại xe, xe, blog)"
+    help = "Seed dá»¯ liá»‡u demo (loáº¡i xe, xe, blog)"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING("Seeding demo data..."))
 
-        # Tạo admin demo nếu chưa có
+        # Táº¡o admin demo náº¿u chÆ°a cÃ³
         if not User.objects.filter(username="admin").exists():
             User.objects.create_superuser("admin", "admin@example.com", "admin123")
             self.stdout.write(self.style.SUCCESS("Created superuser admin/admin123"))
 
-        # Loại xe
+        # Loáº¡i xe
         loai_data = [
             ("LX01", "Xe tay ga"),
-            ("LX02", "Xe số"),
-            ("LX03", "Xe côn tay"),
+            ("LX02", "Xe sá»‘"),
+            ("LX03", "Xe cÃ´n tay"),
         ]
         loai_map = {}
         for ma, ten in loai_data:
@@ -33,9 +34,9 @@ class Command(BaseCommand):
                 "ten": "Yamaha Grande",
                 "gia": 45000000,
                 "gia_km": 42000000,
-                "mau": "Đỏ",
+                "mau": "Äá»",
                 "loai": "LX01",
-                "mota": "Xe tay ga tiết kiệm xăng, phù hợp đô thị.",
+                "mota": "Xe tay ga tiáº¿t kiá»‡m xÄƒng, phÃ¹ há»£p Ä‘Ã´ thá»‹.",
                 "img": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
             },
             {
@@ -43,9 +44,9 @@ class Command(BaseCommand):
                 "ten": "Honda Vision",
                 "gia": 34000000,
                 "gia_km": None,
-                "mau": "Trắng",
+                "mau": "Tráº¯ng",
                 "loai": "LX01",
-                "mota": "Nhỏ gọn, dễ lái, chi phí thấp.",
+                "mota": "Nhá» gá»n, dá»… lÃ¡i, chi phÃ­ tháº¥p.",
                 "img": "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d",
             },
             {
@@ -55,7 +56,7 @@ class Command(BaseCommand):
                 "gia_km": 45000000,
                 "mau": "Xanh",
                 "loai": "LX03",
-                "mota": "Xe côn tay mạnh mẽ, thiết kế thể thao.",
+                "mota": "Xe cÃ´n tay máº¡nh máº½, thiáº¿t káº¿ thá»ƒ thao.",
                 "img": "https://images.unsplash.com/photo-1489515217757-5fd1be406fef",
             },
             {
@@ -63,9 +64,9 @@ class Command(BaseCommand):
                 "ten": "Yamaha Exciter 155",
                 "gia": 51000000,
                 "gia_km": 49500000,
-                "mau": "Đen",
+                "mau": "Äen",
                 "loai": "LX03",
-                "mota": "Côn tay hiệu năng cao, phanh ABS.",
+                "mota": "CÃ´n tay hiá»‡u nÄƒng cao, phanh ABS.",
                 "img": "https://images.unsplash.com/photo-1489515217757-5fd1be406fef",
             },
             {
@@ -75,7 +76,7 @@ class Command(BaseCommand):
                 "gia_km": None,
                 "mau": "Xanh",
                 "loai": "LX02",
-                "mota": "Xe số bền bỉ, tiết kiệm xăng.",
+                "mota": "Xe sá»‘ bá»n bá»‰, tiáº¿t kiá»‡m xÄƒng.",
                 "img": "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d",
             },
         ]
@@ -105,21 +106,21 @@ class Command(BaseCommand):
 
         blog_data = [
             {
-                "title": "Top 5 mẫu xe tay ga đáng mua 2025",
-                "excerpt": "Danh sách xe tay ga tiết kiệm, thiết kế đẹp cho đô thị.",
-                "content": "<p>Gợi ý các mẫu xe nổi bật cùng ưu đãi.</p>",
+                "title": "Top 5 máº«u xe tay ga Ä‘Ã¡ng mua 2025",
+                "excerpt": "Danh sÃ¡ch xe tay ga tiáº¿t kiá»‡m, thiáº¿t káº¿ Ä‘áº¹p cho Ä‘Ã´ thá»‹.",
+                "content": "<p>Gá»£i Ã½ cÃ¡c máº«u xe ná»•i báº­t cÃ¹ng Æ°u Ä‘Ã£i.</p>",
                 "img": "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d",
             },
             {
-                "title": "Mẹo chọn xe côn tay cho người mới",
-                "excerpt": "Chia sẻ kinh nghiệm chọn dung tích, chiều cao yên và an toàn.",
-                "content": "<p>Hướng dẫn chi tiết cho người mới chơi xe côn tay.</p>",
+                "title": "Máº¹o chá»n xe cÃ´n tay cho ngÆ°á»i má»›i",
+                "excerpt": "Chia sáº» kinh nghiá»‡m chá»n dung tÃ­ch, chiá»u cao yÃªn vÃ  an toÃ n.",
+                "content": "<p>HÆ°á»›ng dáº«n chi tiáº¿t cho ngÆ°á»i má»›i chÆ¡i xe cÃ´n tay.</p>",
                 "img": "https://images.unsplash.com/photo-1489515217757-5fd1be406fef",
             },
             {
-                "title": "Bảo dưỡng xe định kỳ để bền hơn",
-                "excerpt": "Lịch thay dầu, kiểm tra lốp, phanh và ắc quy.",
-                "content": "<p>Checklist bảo dưỡng giúp xe vận hành ổn định.</p>",
+                "title": "Báº£o dÆ°á»¡ng xe Ä‘á»‹nh ká»³ Ä‘á»ƒ bá»n hÆ¡n",
+                "excerpt": "Lá»‹ch thay dáº§u, kiá»ƒm tra lá»‘p, phanh vÃ  áº¯c quy.",
+                "content": "<p>Checklist báº£o dÆ°á»¡ng giÃºp xe váº­n hÃ nh á»•n Ä‘á»‹nh.</p>",
                 "img": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
             },
         ]
@@ -140,7 +141,7 @@ class Command(BaseCommand):
                 },
             )
 
-        # Seed đơn hàng mẫu nếu chưa có
+        # Seed Ä‘Æ¡n hÃ ng máº«u náº¿u chÆ°a cÃ³
         user, _ = User.objects.get_or_create(username="user1", defaults={"email": "user1@example.com"})
         if not user.has_usable_password():
             user.set_password("user123456")
@@ -155,7 +156,7 @@ class Command(BaseCommand):
                     status="pending",
                     shipping_name="User One",
                     shipping_phone="0900000000",
-                    shipping_address="123 Đường ABC",
+                    shipping_address="123 ÄÆ°á»ng ABC",
                     shipping_city="HCM",
                     payment_method="COD",
                 )

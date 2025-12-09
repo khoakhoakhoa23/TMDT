@@ -1,4 +1,4 @@
-from .permissions import IsNhanVien
+﻿from core.views_permissions import IsNhanVien
 from .product import LoaiXeViewSet, XeViewSet
 from .people import NhanVienViewSet, KhachHangViewSet, NCCViewSet
 from .billing import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet

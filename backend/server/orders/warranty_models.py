@@ -1,7 +1,7 @@
 from django.db import models
 
-from .people import KhachHang
-from .product import Xe
+from users.models import KhachHang
+from products.models import Xe
 
 
 class BaoHanh(models.Model):

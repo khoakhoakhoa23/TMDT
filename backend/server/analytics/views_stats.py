@@ -1,9 +1,9 @@
-from django.db.models import Sum
+﻿from django.db.models import Sum
 from django.utils.timezone import now
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import HoaDonXuat, ChiTietHDX
+from orders.models import HoaDonXuat, ChiTietHDX
 
 
 @api_view(["GET"])

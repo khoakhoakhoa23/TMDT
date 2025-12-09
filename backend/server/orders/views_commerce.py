@@ -1,10 +1,11 @@
-from django.db import transaction
+﻿from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from orders.models import Cart, CartItem, Order, OrderItem`r`nfrom products.models import Xe
+from cart.commerce_models import Cart, CartItem, Order, OrderItem
+from products.models import Xe
 from orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
 
 
@@ -24,8 +25,7 @@ class CartViewSet(viewsets.ModelViewSet):
                 "items__xe"
             )
         return Cart.objects.none()
-
-    def perform_create(self, serializer):
+def perform_create(self, serializer):
         if self.request.user.is_authenticated:
             serializer.save(user=self.request.user, session_key="")
         else:
@@ -38,15 +38,15 @@ class CartViewSet(viewsets.ModelViewSet):
 class CartItemViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
 
-    def get_queryset(self):
-        session_key = _get_session_key(self.request)
-        if self.request.user.is_authenticated:
-            return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
-        if session_key:
-            return CartItem.objects.filter(
-                cart__session_key=session_key, cart__user__isnull=True
-            ).select_related("xe", "cart")
-        return CartItem.objects.none()
+def get_queryset(self):
+    session_key = _get_session_key(self.request)
+    if self.request.user.is_authenticated:
+        return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
+    if session_key:
+        return CartItem.objects.filter(
+            cart__session_key=session_key, cart__user__isnull=True
+        ).select_related("xe", "cart")
+    return CartItem.objects.none()
 
     def perform_create(self, serializer):
         cart = serializer.validated_data.get("cart")
@@ -124,7 +124,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-
 @transaction.atomic
 def _checkout_transaction(cart):
     items = list(cart.items.select_related("xe"))
@@ -182,4 +181,3 @@ def checkout(request):
     if error:
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
-

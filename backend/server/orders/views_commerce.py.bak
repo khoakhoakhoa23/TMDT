@@ -1,0 +1,186 @@
+﻿from django.db import transaction
+from products.models import Xefrom rest_framework import viewsets, status
+from products.models import Xefrom rest_framework.permissions import IsAuthenticated, AllowAny
+from products.models import Xefrom rest_framework.response import Response
+from products.models import Xefrom rest_framework.exceptions import PermissionDenied
+from products.models import Xe
+from products.models import Xefrom orders.models import Cart, CartItem, Order, OrderItem`r`nfrom products.models import Xe
+from products.models import Xefrom orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
+from products.models import Xe
+from products.models import Xe
+from products.models import Xedef _get_session_key(request):
+from products.models import Xe    return request.headers.get("X-Session-Key") or request.query_params.get("session_key") or ""
+from products.models import Xe
+from products.models import Xe
+from products.models import Xeclass CartViewSet(viewsets.ModelViewSet):
+from products.models import Xe    serializer_class = CartSerializer
+from products.models import Xe
+from products.models import Xe    def get_queryset(self):
+from products.models import Xe        session_key = _get_session_key(self.request)
+from products.models import Xe        if self.request.user.is_authenticated:
+from products.models import Xe            return Cart.objects.filter(user=self.request.user).prefetch_related("items__xe")
+from products.models import Xe        if session_key:
+from products.models import Xe            return Cart.objects.filter(session_key=session_key, user__isnull=True).prefetch_related(
+from products.models import Xe                "items__xe"
+from products.models import Xe            )
+from products.models import Xe        return Cart.objects.none()
+from products.models import Xe
+from products.models import Xe    def perform_create(self, serializer):
+from products.models import Xe        if self.request.user.is_authenticated:
+from products.models import Xe            serializer.save(user=self.request.user, session_key="")
+from products.models import Xe        else:
+from products.models import Xe            session_key = _get_session_key(self.request)
+from products.models import Xe            if not session_key:
+from products.models import Xe                raise PermissionDenied("Thiáº¿u session_key cho khÃ¡ch.")
+from products.models import Xe            serializer.save(user=None, session_key=session_key)
+from products.models import Xe
+from products.models import Xe
+from products.models import Xeclass CartItemViewSet(viewsets.ModelViewSet):
+from products.models import Xe    serializer_class = CartItemSerializer
+from products.models import Xe
+from products.models import Xe    def get_queryset(self):
+from products.models import Xe        session_key = _get_session_key(self.request)
+from products.models import Xe        if self.request.user.is_authenticated:
+from products.models import Xe            return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
+from products.models import Xe        if session_key:
+from products.models import Xe            return CartItem.objects.filter(
+from products.models import Xe                cart__session_key=session_key, cart__user__isnull=True
+from products.models import Xe            ).select_related("xe", "cart")
+from products.models import Xe        return CartItem.objects.none()
+from products.models import Xe
+from products.models import Xe    def perform_create(self, serializer):
+from products.models import Xe        cart = serializer.validated_data.get("cart")
+from products.models import Xe        session_key = _get_session_key(self.request)
+from products.models import Xe        if cart.user:
+from products.models import Xe            if not self.request.user.is_authenticated or cart.user != self.request.user:
+from products.models import Xe                raise PermissionDenied("KhÃ´ng thá»ƒ thÃªm vÃ o giá» cá»§a ngÆ°á»i khÃ¡c.")
+from products.models import Xe        else:
+from products.models import Xe            if not session_key or cart.session_key != session_key:
+from products.models import Xe                raise PermissionDenied("KhÃ´ng thá»ƒ thÃªm vÃ o giá» cá»§a ngÆ°á»i khÃ¡c.")
+from products.models import Xe        serializer.save()
+from products.models import Xe
+from products.models import Xe
+from products.models import Xeclass OrderViewSet(viewsets.ModelViewSet):
+from products.models import Xe    serializer_class = OrderSerializer
+from products.models import Xe    permission_classes = [IsAuthenticated]
+from products.models import Xe
+from products.models import Xe    def get_queryset(self):
+from products.models import Xe        qs = Order.objects.filter(user=self.request.user).prefetch_related("items__xe")
+from products.models import Xe        if self.request.user.is_staff or self.request.user.is_superuser:
+from products.models import Xe            return Order.objects.all().prefetch_related("items__xe")
+from products.models import Xe        return qs
+from products.models import Xe
+from products.models import Xe    @transaction.atomic
+from products.models import Xe    def create(self, request, *args, **kwargs):
+from products.models import Xe        user = request.user
+from products.models import Xe        items_data = request.data.get("items", [])
+from products.models import Xe        if not isinstance(items_data, list) or len(items_data) == 0:
+from products.models import Xe            return Response({"detail": "items trá»‘ng."}, status=status.HTTP_400_BAD_REQUEST)
+from products.models import Xe
+from products.models import Xe        total = 0
+from products.models import Xe        order_items = []
+from products.models import Xe
+from products.models import Xe        for item in items_data:
+from products.models import Xe            xe_id = item.get("xe_id")
+from products.models import Xe            quantity = int(item.get("quantity", 0))
+from products.models import Xe            if not xe_id or quantity <= 0:
+from products.models import Xe                return Response(
+from products.models import Xe                    {"detail": "Thiáº¿u xe_id hoáº·c quantity khÃ´ng há»£p lá»‡."},
+from products.models import Xe                    status=status.HTTP_400_BAD_REQUEST,
+from products.models import Xe                )
+from products.models import Xe            try:
+from products.models import Xe                xe = Xe.objects.get(pk=xe_id)
+from products.models import Xe            except Xe.DoesNotExist:
+from products.models import Xe                return Response({"detail": f"Xe {xe_id} khÃ´ng tá»“n táº¡i."}, status=404)
+from products.models import Xe
+from products.models import Xe            if xe.so_luong < quantity:
+from products.models import Xe                return Response(
+from products.models import Xe                    {"detail": f"Xe '{xe.ten_xe}' chá»‰ cÃ²n {xe.so_luong} chiáº¿c."},
+from products.models import Xe                    status=status.HTTP_400_BAD_REQUEST,
+from products.models import Xe                )
+from products.models import Xe
+from products.models import Xe            price = xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia
+from products.models import Xe            total += price * quantity
+from products.models import Xe            order_items.append((xe, quantity, price))
+from products.models import Xe
+from products.models import Xe        order = Order.objects.create(
+from products.models import Xe            user=user,
+from products.models import Xe            total_price=total,
+from products.models import Xe            status="pending",
+from products.models import Xe            shipping_name=request.data.get("shipping_name", ""),
+from products.models import Xe            shipping_phone=request.data.get("shipping_phone", ""),
+from products.models import Xe            shipping_address=request.data.get("shipping_address", ""),
+from products.models import Xe            shipping_city=request.data.get("shipping_city", ""),
+from products.models import Xe            payment_method=request.data.get("payment_method", ""),
+from products.models import Xe        )
+from products.models import Xe        for xe, qty, price in order_items:
+from products.models import Xe            OrderItem.objects.create(
+from products.models import Xe                order=order, xe=xe, quantity=qty, price_at_purchase=price
+from products.models import Xe            )
+from products.models import Xe            xe.so_luong -= qty
+from products.models import Xe            xe.save()
+from products.models import Xe
+from products.models import Xe        serializer = self.get_serializer(order)
+from products.models import Xe        headers = self.get_success_headers(serializer.data)
+from products.models import Xe        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+from products.models import Xe
+from products.models import Xe
+from products.models import Xe@transaction.atomic
+from products.models import Xedef _checkout_transaction(cart):
+from products.models import Xe    items = list(cart.items.select_related("xe"))
+from products.models import Xe    total = 0
+from products.models import Xe    for item in items:
+from products.models import Xe        xe = item.xe
+from products.models import Xe        if xe.so_luong < item.quantity:
+from products.models import Xe            return None, {"detail": f"Xe '{xe.ten_xe}' chá»‰ cÃ²n {xe.so_luong} chiáº¿c."}
+from products.models import Xe        price = xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia
+from products.models import Xe        total += price * item.quantity
+from products.models import Xe
+from products.models import Xe    order = Order.objects.create(
+from products.models import Xe        user=cart.user,
+from products.models import Xe        total_price=total,
+from products.models import Xe        status="pending",
+from products.models import Xe        shipping_name="",
+from products.models import Xe        shipping_phone="",
+from products.models import Xe        shipping_address="",
+from products.models import Xe        shipping_city="",
+from products.models import Xe        payment_method="",
+from products.models import Xe    )
+from products.models import Xe    for item in items:
+from products.models import Xe        xe = item.xe
+from products.models import Xe        price = xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia
+from products.models import Xe        OrderItem.objects.create(
+from products.models import Xe            order=order, xe=xe, quantity=item.quantity, price_at_purchase=price
+from products.models import Xe        )
+from products.models import Xe        xe.so_luong -= item.quantity
+from products.models import Xe        xe.save()
+from products.models import Xe    cart.items.all().delete()
+from products.models import Xe    return order, None
+from products.models import Xe
+from products.models import Xe
+from products.models import Xefrom rest_framework.decorators import api_view, permission_classes  # noqa: E402
+from products.models import Xe
+from products.models import Xe
+from products.models import Xe@api_view(["POST"])
+from products.models import Xe@permission_classes([AllowAny])
+from products.models import Xedef checkout(request):
+from products.models import Xe    session_key = _get_session_key(request)
+from products.models import Xe    user = request.user if request.user.is_authenticated else None
+from products.models import Xe
+from products.models import Xe    if user:
+from products.models import Xe        cart = Cart.objects.filter(user=user).prefetch_related("items__xe").first()
+from products.models import Xe    else:
+from products.models import Xe        cart = (
+from products.models import Xe            Cart.objects.filter(session_key=session_key, user__isnull=True)
+from products.models import Xe            .prefetch_related("items__xe")
+from products.models import Xe            .first()
+from products.models import Xe        )
+from products.models import Xe    if not cart or cart.items.count() == 0:
+from products.models import Xe        return Response({"detail": "Giá» hÃ ng trá»‘ng."}, status=status.HTTP_400_BAD_REQUEST)
+from products.models import Xe
+from products.models import Xe    order, error = _checkout_transaction(cart)
+from products.models import Xe    if error:
+from products.models import Xe        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+from products.models import Xe    return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+from products.models import Xe
+from products.models import Xe

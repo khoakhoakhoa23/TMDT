@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+﻿from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 from orders.models import HoaDonNhap, ChiTietHDN, HoaDonXuat, ChiTietHDX
@@ -8,7 +8,7 @@ from orders.serializers import (
     HoaDonXuatSerializer,
     ChiTietHDXSerializer,
 )
-from .permissions import IsNhanVien
+from core.views_permissions import IsNhanVien
 
 
 class HoaDonNhapViewSet(viewsets.ModelViewSet):
