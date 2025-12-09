@@ -1,0 +1,68 @@
+﻿from rest_framework import serializers
+from cart.commerce_models import Cart, CartItem, Order, OrderItem
+from products.models import Xe
+from products.serializers import XeSerializer
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    xe = XeSerializer(read_only=True)
+    xe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Xe.objects.all(), source="xe", write_only=True
+    )
+    cart_id = serializers.PrimaryKeyRelatedField(
+        queryset=Cart.objects.all(), source="cart", write_only=True
+    )
+
+    class Meta:
+        model = CartItem
+        fields = ["id", "cart_id", "xe", "xe_id", "quantity"]
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    session_key = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = Cart
+        fields = ["id", "user", "session_key", "created_at", "updated_at", "items"]
+        read_only_fields = ["user", "created_at", "updated_at"]
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    xe = XeSerializer(read_only=True)
+    xe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Xe.objects.all(), source="xe", write_only=True
+    )
+
+    class Meta:
+        model = OrderItem
+        fields = ["id", "xe", "xe_id", "quantity", "price_at_purchase"]
+        read_only_fields = ["price_at_purchase"]
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "user",
+            "created_at",
+            "status",
+            "total_price",
+            "note",
+            "shipping_name",
+            "shipping_phone",
+            "shipping_address",
+            "shipping_city",
+            "payment_method",
+            "payment_status",
+            "start_date",
+            "end_date",
+            "pickup_location",
+            "return_location",
+            "rental_days",
+            "items",
+        ]
+        read_only_fields = ["user", "created_at", "total_price", "payment_status"]
