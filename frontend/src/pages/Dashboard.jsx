@@ -1,50 +1,111 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
-import Chart from "../components/Chart";
+import orderApi from "../api/orderApi";
+import carApi from "../api/carApi";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    doanhThuHomNay: 0,
-    tongXeDaBan: 0,
-    topXeBanChay: [],
-  });
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [latestOrder, setLatestOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [carRentalStats, setCarRentalStats] = useState([]);
+  const [totalRentals, setTotalRentals] = useState(0);
 
   useEffect(() => {
-    fetchStats();
     fetchRecentTransactions();
+    fetchLatestOrder();
+    fetchCarRentalStats();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchRecentTransactions = async () => {
     try {
-      const [revenueToday, totalSold, topCars] = await Promise.all([
-        axiosClient.get("thongke/doanhthu-homnay/"),
-        axiosClient.get("thongke/tong-xe-da-ban/"),
-        axiosClient.get("thongke/top-xe-ban-chay/"),
-      ]);
-
-      setStats({
-        doanhThuHomNay: revenueToday.data.doanh_thu || 0,
-        tongXeDaBan: totalSold.data.tong_xe || 0,
-        topXeBanChay: topCars.data.results || topCars.data || [],
-      });
+      const response = await orderApi.getAll();
+      const orders = response.data.results || response.data || [];
+      // Sort by created_at descending and take first 4
+      const sortedOrders = orders
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 4);
+      setRecentTransactions(sortedOrders);
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching transactions:", error);
+      setRecentTransactions([]);
+    }
+  };
+
+  const fetchLatestOrder = async () => {
+    try {
+      const response = await orderApi.getAll();
+      const orders = response.data.results || response.data || [];
+      if (orders && orders.length > 0) {
+        // Lấy order có rental info gần nhất
+        const orderWithRental = orders.find(
+          (o) => o.pickup_location || o.start_date || o.end_date
+        ) || orders[0];
+        setLatestOrder(orderWithRental);
+      }
+    } catch (error) {
+      console.error("Error fetching latest order:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRecentTransactions = async () => {
+  const fetchCarRentalStats = async () => {
     try {
-      const response = await axiosClient.get("order/");
-      const orders = response.data.results || response.data;
-      setRecentTransactions(orders.slice(0, 4));
+      // Fetch all orders to calculate stats by car type
+      const ordersResponse = await orderApi.getAll();
+      const orders = ordersResponse.data.results || ordersResponse.data || [];
+      
+      // Fetch all cars to get car types
+      const carsResponse = await carApi.getAll();
+      const cars = carsResponse.data.results || carsResponse.data || [];
+      
+      // Count rentals by car type
+      const statsMap = {};
+      let total = 0;
+      
+      orders.forEach((order) => {
+        order.items?.forEach((item) => {
+          const car = item.xe;
+          if (car && car.loai_xe) {
+            const carType = car.loai_xe.ten_loai || car.loai_xe_detail?.ten_loai || "Unknown";
+            if (!statsMap[carType]) {
+              statsMap[carType] = 0;
+            }
+            statsMap[carType] += item.quantity || 1;
+            total += item.quantity || 1;
+          }
+        });
+      });
+      
+      // Convert to array and sort by value
+      const statsArray = Object.entries(statsMap)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5); // Top 5
+      
+      // Assign colors
+      const colors = ["#3B82F6", "#60A5FA", "#93C5FD", "#DBEAFE", "#EFF6FF"];
+      const chartData = statsArray.map((item, index) => ({
+        ...item,
+        color: colors[index] || "#EFF6FF",
+      }));
+      
+      setCarRentalStats(chartData);
+      setTotalRentals(total || chartData.reduce((sum, item) => sum + item.value, 0));
     } catch (error) {
-      console.error("Error fetching transactions:", error);
+      console.error("Error fetching car rental stats:", error);
+      // Fallback to default data
+      const defaultData = [
+        { label: "Sport Car", value: 17439, color: "#3B82F6" },
+        { label: "SUV", value: 9478, color: "#60A5FA" },
+        { label: "Coupe", value: 18197, color: "#93C5FD" },
+        { label: "Hatchback", value: 12510, color: "#DBEAFE" },
+        { label: "MPV", value: 14406, color: "#EFF6FF" },
+      ];
+      setCarRentalStats(defaultData);
+      setTotalRentals(defaultData.reduce((sum, item) => sum + item.value, 0));
     }
   };
 
@@ -57,6 +118,22 @@ const Dashboard = () => {
     navigate("/category");
   };
 
+  const getImageUrl = (imageUrl, image) => {
+    if (imageUrl) {
+      if (imageUrl.startsWith('http')) {
+        return imageUrl;
+      }
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      return baseUrl.replace('/api', '') + (imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl);
+    }
+    if (image) {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const imagePath = image.startsWith('/') ? image : '/' + image;
+      return baseUrl.replace('/api', '') + imagePath;
+    }
+    return "/images/img_car.png";
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -64,17 +141,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-  // Prepare chart data for Top 5 Car Rental
-  const chartData = [
-    { label: "Sport Car", value: 17439, color: "#3B82F6" },
-    { label: "SUV", value: 9478, color: "#60A5FA" },
-    { label: "Coupe", value: 18197, color: "#93C5FD" },
-    { label: "Hatchback", value: 12510, color: "#DBEAFE" },
-    { label: "MPV", value: 14406, color: "#EFF6FF" },
-  ];
-
-  const totalRentals = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className="space-y-6">
@@ -86,31 +152,51 @@ const Dashboard = () => {
           {/* Map Placeholder */}
           <div className="bg-blue-100 rounded-lg h-64 mb-6 flex items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-200 to-blue-300"></div>
-            <div className="relative z-10 text-center">
-              <svg className="w-16 h-16 mx-auto text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            {/* Simulated map roads */}
+            <div className="absolute inset-0 opacity-30">
+              <svg className="w-full h-full" viewBox="0 0 400 300">
+                {/* Horizontal roads */}
+                <line x1="0" y1="100" x2="400" y2="100" stroke="#60A5FA" strokeWidth="8" />
+                <line x1="0" y1="200" x2="400" y2="200" stroke="#60A5FA" strokeWidth="8" />
+                {/* Vertical roads */}
+                <line x1="100" y1="0" x2="100" y2="300" stroke="#60A5FA" strokeWidth="8" />
+                <line x1="300" y1="0" x2="300" y2="300" stroke="#60A5FA" strokeWidth="8" />
+                {/* Buildings */}
+                <rect x="50" y="50" width="40" height="40" fill="#93C5FD" opacity="0.5" />
+                <rect x="150" y="150" width="40" height="40" fill="#93C5FD" opacity="0.5" />
+                <rect x="250" y="50" width="40" height="40" fill="#93C5FD" opacity="0.5" />
+                <rect x="350" y="150" width="40" height="40" fill="#93C5FD" opacity="0.5" />
               </svg>
-              <p className="text-blue-600 font-semibold">Map View</p>
             </div>
             {/* Route line */}
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-blue-600"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-3 bg-blue-600 opacity-80"></div>
             {/* Pin */}
-            <div className="absolute bottom-4 right-1/4 w-6 h-6 bg-blue-600 rounded-full border-2 border-white"></div>
+            <div className="absolute bottom-6 right-1/4 w-8 h-8 bg-blue-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
           </div>
 
           {/* Car Info */}
-          <div className="bg-blue-50 rounded-lg p-4 mb-6 flex items-center space-x-4">
-            <img
-              src="/images/img_car.png"
-              alt="Car"
-              className="w-20 h-20 object-cover rounded"
-            />
-            <div>
-              <h3 className="font-bold text-lg">Nissan GT-R</h3>
-              <p className="text-gray-600">Sport Car</p>
-              <p className="text-sm text-gray-500">#9761</p>
+          {latestOrder && latestOrder.items && latestOrder.items[0] && (
+            <div className="bg-blue-50 rounded-lg p-4 mb-6 flex items-center space-x-4">
+              <img
+                src={getImageUrl(
+                  latestOrder.items[0].xe?.image_url,
+                  latestOrder.items[0].xe?.image
+                )}
+                alt={latestOrder.items[0].xe?.ten_xe || "Car"}
+                className="w-20 h-20 object-contain rounded bg-white p-2"
+                onError={(e) => {
+                  e.target.src = "/images/img_car.png";
+                }}
+              />
+              <div>
+                <h3 className="font-bold text-lg">{latestOrder.items[0].xe?.ten_xe || "N/A"}</h3>
+                <p className="text-gray-600">{latestOrder.items[0].xe?.loai_xe?.ten_loai || latestOrder.items[0].xe?.loai_xe_detail?.ten_loai || "N/A"}</p>
+                <p className="text-sm text-gray-500">#{latestOrder.id}</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Pick-Up Details */}
           <div className="mb-4">
@@ -121,21 +207,46 @@ const Dashboard = () => {
             <div className="grid grid-cols-3 gap-4 ml-5">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Locations</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>Kota Semarang</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Time</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>07.00</option>
-                </select>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>{latestOrder?.pickup_location || "N/A"}</span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Date</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>20 July 2022</option>
-                </select>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>
+                    {latestOrder?.start_date
+                      ? new Date(latestOrder.start_date).toLocaleDateString("en-US", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "N/A"}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Time</label>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>
+                    {latestOrder?.start_date
+                      ? new Date(latestOrder.start_date).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        }).replace(":", ".")
+                      : "07.00"}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -143,27 +254,52 @@ const Dashboard = () => {
           {/* Drop-Off Details */}
           <div className="mb-6">
             <div className="flex items-center space-x-2 mb-3">
-              <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
               <span className="font-semibold">Drop - Off</span>
             </div>
             <div className="grid grid-cols-3 gap-4 ml-5">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Locations</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>Kota Semarang</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Time</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>01.00</option>
-                </select>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>{latestOrder?.return_location || "N/A"}</span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Date</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                  <option>21 July 2022</option>
-                </select>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>
+                    {latestOrder?.end_date
+                      ? new Date(latestOrder.end_date).toLocaleDateString("en-US", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "N/A"}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Time</label>
+                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                  <span>
+                    {latestOrder?.end_date
+                      ? new Date(latestOrder.end_date).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        }).replace(":", ".")
+                      : "01.00"}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
@@ -174,7 +310,9 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm text-gray-600">Overall price and includes rental discount</p>
               </div>
-              <p className="text-2xl font-bold text-blue-600">${(stats.doanhThuHomNay / 23000).toFixed(2)}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                ${latestOrder?.total_price ? (latestOrder.total_price / 23000).toFixed(2) : "0.00"}
+              </p>
             </div>
           </div>
         </div>
@@ -193,9 +331,9 @@ const Dashboard = () => {
           {/* Donut Chart */}
           <div className="relative w-48 h-48 mx-auto mb-4">
             <svg viewBox="0 0 100 100" className="transform -rotate-90">
-              {chartData.map((item, index) => {
-                const percentage = (item.value / totalRentals) * 100;
-                const offset = chartData.slice(0, index).reduce((sum, d) => sum + (d.value / totalRentals) * 100, 0);
+              {carRentalStats.map((item, index) => {
+                const percentage = totalRentals > 0 ? (item.value / totalRentals) * 100 : 0;
+                const offset = carRentalStats.slice(0, index).reduce((sum, d) => sum + (totalRentals > 0 ? (d.value / totalRentals) * 100 : 0), 0);
                 const circumference = 2 * Math.PI * 40;
                 const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
                 const strokeDashoffset = -offset * circumference / 100;
@@ -224,18 +362,22 @@ const Dashboard = () => {
 
           {/* Legend */}
           <div className="space-y-2">
-            {chartData.map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-sm text-gray-700">{item.label}</span>
+            {carRentalStats.length > 0 ? (
+              carRentalStats.map((item) => (
+                <div key={item.label} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-sm text-gray-700">{item.label}</span>
+                  </div>
+                  <span className="text-sm font-semibold">{item.value.toLocaleString()}</span>
                 </div>
-                <span className="text-sm font-semibold">{item.value.toLocaleString()}</span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">No data available</p>
+            )}
           </div>
         </div>
       </div>
@@ -250,38 +392,46 @@ const Dashboard = () => {
         </div>
         <div className="space-y-4">
           {recentTransactions.length > 0 ? (
-            recentTransactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                onClick={() => handleTransactionClick(transaction)}
-                className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                <img
-                  src="/images/img_car.png"
-                  alt="Car"
-                  className="w-16 h-16 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold">
-                    {transaction.items?.[0]?.xe?.ten_xe || "Nissan GT-R"}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {transaction.items?.[0]?.xe?.loai_xe?.ten_loai || "Sport Car"}
-                  </p>
+            recentTransactions.map((transaction) => {
+              const car = transaction.items?.[0]?.xe;
+              return (
+                <div
+                  key={transaction.id}
+                  onClick={() => handleTransactionClick(transaction)}
+                  className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <img
+                    src={getImageUrl(car?.image_url, car?.image)}
+                    alt={car?.ten_xe || "Car"}
+                    className="w-16 h-16 object-contain rounded bg-gray-50 p-2"
+                    onError={(e) => {
+                      e.target.src = "/images/img_car.png";
+                    }}
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold">
+                      {car?.ten_xe || "N/A"}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {car?.loai_xe?.ten_loai || car?.loai_xe_detail?.ten_loai || "N/A"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">
+                      {transaction.created_at
+                        ? new Date(transaction.created_at).toLocaleDateString("en-US", {
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : "N/A"}
+                    </p>
+                    <p className="font-semibold text-blue-600">
+                      ${transaction.total_price ? (transaction.total_price / 23000).toFixed(2) : "0.00"}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    {new Date(transaction.created_at).toLocaleDateString("en-US", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                  <p className="font-semibold text-blue-600">
-                    ${(transaction.total_price / 23000).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-gray-500 text-center py-8">No recent transactions</p>
           )}

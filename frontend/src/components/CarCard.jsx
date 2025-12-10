@@ -2,20 +2,66 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const CarCard = ({ car }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const price = car.gia_thue || car.gia_khuyen_mai || car.gia || 0;
-  const originalPrice = car.gia_khuyen_mai ? car.gia : null;
+  // Debug: Log dữ liệu xe để kiểm tra (uncomment để debug)
+  // console.log('Car data:', car);
+  // console.log('gia_thue:', car.gia_thue, 'gia_khuyen_mai:', car.gia_khuyen_mai, 'gia:', car.gia);
+
+  // Ưu tiên gia_thue (giá thuê), nếu không có hoặc = 0 thì dùng gia, nếu có gia_khuyen_mai thì dùng nó
+  let price = 0;
+  if (car.gia_thue !== undefined && car.gia_thue !== null && car.gia_thue > 0) {
+    price = car.gia_thue;
+  } else if (car.gia_khuyen_mai !== undefined && car.gia_khuyen_mai !== null && car.gia_khuyen_mai > 0) {
+    price = car.gia_khuyen_mai;
+  } else if (car.gia !== undefined && car.gia !== null && car.gia > 0) {
+    price = car.gia;
+  }
+  
+  // Giá gốc (nếu có khuyến mãi và gia_thue đang dùng)
+  let originalPrice = null;
+  if (price === car.gia_khuyen_mai && car.gia && car.gia > car.gia_khuyen_mai) {
+    originalPrice = car.gia;
+  }
+  
+  // Lấy tên loại xe
+  const loaiXeName = car.loai_xe?.ten_loai || car.loai_xe_detail?.ten_loai || (typeof car.loai_xe === 'string' ? car.loai_xe : 'N/A');
+  
+  // Lấy URL ảnh - ưu tiên image_url, nếu không có thì dùng image
+  const getImageUrl = () => {
+    if (car.image_url) {
+      // Nếu là URL đầy đủ thì dùng luôn
+      if (car.image_url.startsWith('http')) {
+        return car.image_url;
+      }
+      // Nếu là relative path, thêm base URL
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      return baseUrl.replace('/api', '') + (car.image_url.startsWith('/') ? car.image_url : '/' + car.image_url);
+    }
+    if (car.image) {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const imagePath = car.image.startsWith('/') ? car.image : '/' + car.image;
+      return baseUrl.replace('/api', '') + imagePath;
+    }
+    return "/images/img_car.png";
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative">
+      <div className="relative bg-gray-50">
         <Link to={`/detail/${car.ma_xe || car.id}`}>
-          <img
-            src={car.image_url || "/images/img_car.png"}
-            alt={car.ten_xe || "Car"}
-            className="w-full h-48 object-cover"
-          />
+          <div className="w-full h-56 flex items-center justify-center overflow-hidden">
+            <img
+              src={getImageUrl()}
+              alt={car.ten_xe || "Car"}
+              className="w-full h-full object-contain p-4"
+              onError={(e) => {
+                e.target.src = "/images/img_car.png";
+              }}
+            />
+          </div>
         </Link>
         <button
           onClick={(e) => {
@@ -42,11 +88,13 @@ const CarCard = ({ car }) => {
 
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <div>
+          <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-800">
               {car.ten_xe || "Tên xe"}
             </h3>
-            <p className="text-sm text-gray-500">{car.loai_xe?.ten_loai || "N/A"}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {loaiXeName}
+            </p>
           </div>
         </div>
 
@@ -67,7 +115,7 @@ const CarCard = ({ car }) => {
                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <span>70L</span>
+            <span>{car.dung_tich_nhien_lieu || 70}L</span>
           </div>
           <div className="flex items-center">
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,7 +132,7 @@ const CarCard = ({ car }) => {
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-            <span>Manual</span>
+            <span>{car.hop_so === 'automatic' ? 'Automatic' : car.hop_so === 'manual' ? 'Manual' : car.hop_so || 'Manual'}</span>
           </div>
           <div className="flex items-center">
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,20 +143,32 @@ const CarCard = ({ car }) => {
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
-            <span>2 People</span>
+            <span>{car.so_cho || 2} People</span>
           </div>
         </div>
 
         {/* Price and Rent Button */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold text-gray-800">
-              ${(price / 23000).toFixed(2)}/day
-            </div>
-            {originalPrice && (
-              <div className="text-sm text-gray-400 line-through">
-                ${(originalPrice / 23000).toFixed(2)}
-              </div>
+            {price > 0 ? (
+              <>
+                <div className="text-2xl font-bold text-gray-800">
+                  ${(price / 23000).toFixed(2)}/day
+                </div>
+                {originalPrice && originalPrice > 0 && originalPrice !== price && (
+                  <div className="text-sm text-gray-400 line-through">
+                    ${(originalPrice / 23000).toFixed(2)}
+                  </div>
+                )}
+                {/* Debug: Hiển thị giá VNĐ nếu giá USD quá nhỏ */}
+                {(price / 23000) < 0.01 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {price.toLocaleString('vi-VN')} VNĐ/ngày
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-lg text-gray-500">Chưa có giá</div>
             )}
           </div>
           <button

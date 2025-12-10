@@ -6,6 +6,9 @@ import Category from "../pages/Category";
 import Detail from "../pages/Detail";
 import Payment from "../pages/Payment";
 import Dashboard from "../pages/Dashboard";
+import OrdersPage from "../pages/admin/OrdersPage";
+import ProductsPage from "../pages/admin/ProductsPage";
+import UsersPage from "../pages/admin/UsersPage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import PrivateRoute from "./PrivateRoute";
@@ -27,9 +30,9 @@ const AppRoutes = () => {
         <Route path="payment" element={<Payment />} />
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="orders" element={<div>Orders Page</div>} />
-          <Route path="products" element={<div>Products Page</div>} />
-          <Route path="users" element={<div>Users Page</div>} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="analytics" element={<div>Analytics Page</div>} />
         </Route>
       </Route>

@@ -34,60 +34,65 @@ const Category = () => {
   const applyFilters = () => {
     let filtered = [...cars];
 
+    // Filter by TYPE
     if (filters.types) {
       const selectedTypes = Object.keys(filters.types).filter(
         (key) => filters.types[key]
       );
-      if (selectedTypes.length > 0) {
+      if (selectedTypes.length > 0 && selectedTypes.length < Object.keys(filters.types).length) {
         filtered = filtered.filter((car) => {
-          const carType = car.loai_xe?.ten_loai?.toLowerCase() || "";
-          return selectedTypes.some((type) => carType.includes(type));
+          const carType = (car.loai_xe?.ten_loai || "").toLowerCase();
+          return selectedTypes.some((type) => carType.includes(type.toLowerCase()));
         });
       }
     }
 
+    // Filter by CAPACITY
     if (filters.capacity) {
       const selectedCapacities = Object.keys(filters.capacity).filter(
         (key) => filters.capacity[key]
       );
-      if (selectedCapacities.length > 0) {
+      if (selectedCapacities.length > 0 && selectedCapacities.length < Object.keys(filters.capacity).length) {
         filtered = filtered.filter((car) => {
-          const seats = car.capacity || car.seats || car.so_cho;
-          if (!seats) return true; // keep if no data
-          if (seats >= 8 && selectedCapacities.includes("8+")) return true;
+          const seats = car.so_cho || 2;
+          if (selectedCapacities.includes("8+")) {
+            return seats >= 8;
+          }
           return selectedCapacities.includes(String(seats));
         });
       }
     }
 
+    // Filter by FUEL
     if (filters.fuel) {
       const selectedFuel = Object.keys(filters.fuel).filter(
         (key) => filters.fuel[key]
       );
-      if (selectedFuel.length > 0) {
+      if (selectedFuel.length > 0 && selectedFuel.length < Object.keys(filters.fuel).length) {
         filtered = filtered.filter((car) => {
-          const fuel =
-            (car.nhien_lieu || car.fuel || car.loai_nhien_lieu || "").toLowerCase();
-          if (!fuel) return true;
-          return selectedFuel.some((item) => fuel.includes(item));
+          const fuel = (car.loai_nhien_lieu || "").toLowerCase();
+          if (!fuel) return true; // keep if no data
+          return selectedFuel.some((item) => fuel.includes(item.toLowerCase()));
         });
       }
     }
 
+    // Filter by TRANSMISSION
     if (filters.transmission) {
       const selectedTrans = Object.keys(filters.transmission).filter(
         (key) => filters.transmission[key]
       );
-      if (selectedTrans.length > 0) {
+      if (selectedTrans.length > 0 && selectedTrans.length < Object.keys(filters.transmission).length) {
         filtered = filtered.filter((car) => {
-          const trans = (car.transmission || car.hop_so || "").toLowerCase();
-          if (!trans) return true;
-          return selectedTrans.some((item) => trans.includes(item));
+          const trans = (car.hop_so || "").toLowerCase();
+          if (!trans) return true; // keep if no data
+          return selectedTrans.some((item) => trans.includes(item.toLowerCase()));
         });
       }
     }
 
-    if (filters.maxPrice) {
+    // Filter by PRICE
+    if (filters.maxPrice && filters.maxPrice < 200) {
       const maxPriceVND = filters.maxPrice * 23000; // Convert USD to VND
       filtered = filtered.filter((car) => {
         const price = car.gia_thue || car.gia_khuyen_mai || car.gia || 0;
@@ -122,7 +127,7 @@ const Category = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Filter Sidebar */}
         <div className="lg:col-span-1">
-          <FilterSidebar onFilterChange={handleFilterChange} />
+          <FilterSidebar onFilterChange={handleFilterChange} cars={cars} />
         </div>
 
         {/* Car Grid */}
