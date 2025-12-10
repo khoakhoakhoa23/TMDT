@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import LoaiXe, Xe, BlogPost
+from .models import Location, LoaiXe, Xe, BlogPost, Review, CarImage
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ("ten_dia_diem", "dia_chi_chi_tiet", "trang_thai", "created_at")
+    list_filter = ("trang_thai",)
+    search_fields = ("ten_dia_diem", "dia_chi_chi_tiet")
+    list_editable = ("trang_thai",)
 
 
 @admin.register(LoaiXe)
@@ -22,3 +30,20 @@ class BlogPostAdmin(admin.ModelAdmin):
     list_filter = ("is_published",)
     search_fields = ("title", "slug", "seo_keywords")
     prepopulated_fields = {"slug": ("title",)}
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ("user", "xe", "rating", "created_at", "updated_at")
+    list_filter = ("rating", "created_at")
+    search_fields = ("user__username", "xe__ten_xe", "comment")
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(CarImage)
+class CarImageAdmin(admin.ModelAdmin):
+    list_display = ("xe", "image", "is_primary", "order", "created_at")
+    list_filter = ("is_primary", "created_at")
+    search_fields = ("xe__ten_xe",)
+    list_editable = ("is_primary", "order")
+    readonly_fields = ("created_at", "updated_at")

@@ -1,8 +1,18 @@
 from rest_framework import viewsets, filters
 from rest_framework.permissions import IsAdminUser, AllowAny
 
-from products.models import LoaiXe, Xe
-from products.serializers import LoaiXeSerializer, XeSerializer
+from products.models import Location, LoaiXe, Xe
+from products.serializers import LocationSerializer, LoaiXeSerializer, XeSerializer
+
+
+class LocationViewSet(viewsets.ModelViewSet):
+    queryset = Location.objects.filter(trang_thai=True).order_by('ten_dia_diem')
+    serializer_class = LocationSerializer
+    
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        return [IsAdminUser()]
 
 
 class LoaiXeViewSet(viewsets.ModelViewSet):
@@ -25,6 +35,12 @@ class XeViewSet(viewsets.ModelViewSet):
         if self.action in ["list", "retrieve"]:
             return [AllowAny()]
         return [IsAdminUser()]
+
+    def get_serializer_context(self):
+        """Truyền request vào serializer để build absolute URI cho image"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def get_queryset(self):
         qs = Xe.objects.select_related("loai_xe").all()

@@ -1,6 +1,23 @@
 from django.db import models
 
 
+class Location(models.Model):
+    """Địa điểm nhận/trả xe"""
+    ten_dia_diem = models.CharField(max_length=255, unique=True, help_text="Tên địa điểm")
+    dia_chi_chi_tiet = models.TextField(blank=True, help_text="Địa chỉ chi tiết")
+    trang_thai = models.BooleanField(default=True, help_text="Đang hoạt động")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['ten_dia_diem']
+        verbose_name = "Địa điểm"
+        verbose_name_plural = "Địa điểm"
+
+    def __str__(self):
+        return self.ten_dia_diem
+
+
 class LoaiXe(models.Model):
     ma_loai = models.CharField(max_length=10, primary_key=True)
     ten_loai = models.CharField(max_length=255)
@@ -27,6 +44,22 @@ class Xe(models.Model):
         default="in_stock",
     )
     image_url = models.URLField(max_length=500, blank=True)
+    image = models.ImageField(upload_to="cars/", blank=True, null=True, help_text="Upload ảnh từ máy tính")
+    # Thông tin kỹ thuật
+    dung_tich_nhien_lieu = models.IntegerField(default=70, help_text="Dung tích nhiên liệu (L)")
+    hop_so = models.CharField(
+        max_length=20,
+        choices=[("manual", "Số sàn"), ("automatic", "Số tự động")],
+        default="manual",
+        help_text="Loại hộp số"
+    )
+    so_cho = models.IntegerField(default=2, help_text="Số chỗ ngồi")
+    loai_nhien_lieu = models.CharField(
+        max_length=20,
+        choices=[("gasoline", "Xăng"), ("electric", "Điện"), ("hybrid", "Hybrid")],
+        default="gasoline",
+        help_text="Loại nhiên liệu"
+    )
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=500, blank=True)
     seo_keywords = models.CharField(max_length=500, blank=True)
