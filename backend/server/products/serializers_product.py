@@ -26,6 +26,79 @@ class XeSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ['image']  # image chỉ đọc, upload qua image_file
         depth = 1  # Tự động serialize ForeignKey với depth 1
+        # Không override loai_xe, để nó vẫn hiển thị bình thường khi read
+    
+    def to_internal_value(self, data):
+        """Convert string numbers to integers for FormData"""
+        # Khi nhận FormData, data có thể là QueryDict hoặc dict
+        # Convert các field số từ string sang int
+        int_fields = ['gia', 'gia_thue', 'gia_khuyen_mai', 'so_luong', 'so_cho', 'dung_tich_nhien_lieu']
+        
+        # Xử lý QueryDict (từ FormData)
+        if hasattr(data, 'get'):
+            data_dict = {}
+            for key in data.keys():
+                value = data.get(key)
+                if key in int_fields and isinstance(value, str) and value.strip():
+                    try:
+                        data_dict[key] = int(value)
+                    except (ValueError, TypeError):
+                        data_dict[key] = value
+                else:
+                    data_dict[key] = value
+            data = data_dict
+        elif isinstance(data, dict):
+            # Xử lý dict thông thường
+            for field in int_fields:
+                if field in data and isinstance(data[field], str) and data[field].strip():
+                    try:
+                        data[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        pass
+        
+        return super().to_internal_value(data)
+    
+    def validate_loai_xe(self, value):
+        """Validate và tìm LoaiXe từ ma_loai (string) khi write"""
+        # Nếu value đã là LoaiXe object, trả về luôn (khi read)
+        if isinstance(value, LoaiXe):
+            return value
+        
+        # Nếu là string (ma_loai), tìm LoaiXe tương ứng (khi write)
+        if isinstance(value, str) and value.strip():
+            try:
+                loai_xe = LoaiXe.objects.get(ma_loai=value)
+                return loai_xe
+            except LoaiXe.DoesNotExist:
+                raise serializers.ValidationError(f"Không tìm thấy loại xe với mã '{value}'. Vui lòng kiểm tra lại mã loại xe.")
+            except LoaiXe.MultipleObjectsReturned:
+                # Trường hợp này không nên xảy ra vì ma_loai là primary key
+                raise serializers.ValidationError(f"Có nhiều loại xe với mã '{value}'")
+        
+        # Nếu value rỗng hoặc None
+        if not value:
+            raise serializers.ValidationError("Loại xe là bắt buộc")
+        
+        return value
+    
+    def validate_slug(self, value):
+        """Đảm bảo slug unique"""
+        if not value:
+            return value
+        
+        # Kiểm tra slug đã tồn tại chưa
+        from products.models import Xe
+        queryset = Xe.objects.filter(slug=value)
+        # Nếu đang update, loại trừ instance hiện tại
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        
+        if queryset.exists():
+            # Tạo slug mới bằng cách thêm timestamp
+            import time
+            value = f"{value}-{int(time.time())}"
+        
+        return value
     
     def get_car_images(self, obj):
         """Lấy danh sách ảnh của xe"""
@@ -44,11 +117,22 @@ class XeSerializer(serializers.ModelSerializer):
         return obj.image_url or None
     
     def to_representation(self, instance):
-        """Đảm bảo image_url luôn được cập nhật từ image"""
+        """Đảm bảo image_url luôn được cập nhật từ image và loai_xe được serialize đúng"""
         ret = super().to_representation(instance)
         # Thay image_url bằng image_url_display
         if 'image_url_display' in ret:
             ret['image_url'] = ret.pop('image_url_display')
+        
+        # Đảm bảo loai_xe được hiển thị đúng (depth=1 sẽ tự động serialize thành object)
+        # Nếu loai_xe không có hoặc là string, đảm bảo nó là object
+        if instance.loai_xe:
+            if 'loai_xe' not in ret or not isinstance(ret.get('loai_xe'), dict):
+                # Nếu depth không hoạt động, serialize thủ công
+                ret['loai_xe'] = {
+                    'ma_loai': instance.loai_xe.ma_loai,
+                    'ten_loai': instance.loai_xe.ten_loai
+                }
+        
         return ret
     
     def create(self, validated_data):

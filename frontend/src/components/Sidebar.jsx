@@ -1,15 +1,33 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const Sidebar = () => {
   const location = useLocation();
+  const { isAdmin } = useAuth();
 
-  const menuItems = [
-    { path: "/dashboard", label: "Dashboard", icon: "📊" },
-    { path: "/dashboard/orders", label: "Đơn hàng", icon: "📦" },
-    { path: "/dashboard/products", label: "Sản phẩm", icon: "🚗" },
-    { path: "/dashboard/users", label: "Người dùng", icon: "👥" },
-    { path: "/dashboard/analytics", label: "Thống kê", icon: "📈" },
+  const allMenuItems = [
+    { path: "/dashboard", label: "Dashboard", icon: "📊", adminOnly: false },
+    { path: "/dashboard/orders", label: "Đơn hàng", icon: "📦", adminOnly: true },
+    { path: "/dashboard/products", label: "Sản phẩm", icon: "🚗", adminOnly: true },
+    { path: "/dashboard/users", label: "Người dùng", icon: "👥", adminOnly: true, adminLabel: "Người dùng" },
+    { path: "/dashboard/profile", label: "Thông tin cá nhân", icon: "👤", adminOnly: false, userLabel: "Thông tin cá nhân" },
+    { path: "/dashboard/analytics", label: "Thống kê", icon: "📈", adminOnly: true },
   ];
+
+  // Filter and map menu items based on user role
+  const menuItems = allMenuItems
+    .filter((item) => !item.adminOnly || isAdmin)
+    .map((item) => {
+      // Nếu là user thường và có userLabel, dùng userLabel
+      if (!isAdmin && item.userLabel) {
+        return { ...item, label: item.userLabel };
+      }
+      // Nếu là admin và có adminLabel, dùng adminLabel
+      if (isAdmin && item.adminLabel) {
+        return { ...item, label: item.adminLabel };
+      }
+      return item;
+    });
 
   return (
     <aside className="w-64 bg-gray-800 text-white min-h-screen">

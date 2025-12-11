@@ -9,9 +9,12 @@ import Dashboard from "../pages/Dashboard";
 import OrdersPage from "../pages/admin/OrdersPage";
 import ProductsPage from "../pages/admin/ProductsPage";
 import UsersPage from "../pages/admin/UsersPage";
+import ProfilePage from "../pages/admin/ProfilePage";
+import AnalyticsPage from "../pages/admin/AnalyticsPage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import PrivateRoute from "./PrivateRoute";
+import AdminRoute from "./AdminRoute";
 
 const AppRoutes = () => {
   return (
@@ -30,10 +33,41 @@ const AppRoutes = () => {
         <Route path="payment" element={<Payment />} />
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="analytics" element={<div>Analytics Page</div>} />
+          {/* Public route for all users */}
+          <Route path="profile" element={<ProfilePage />} />
+          {/* Admin only routes */}
+          <Route
+            path="orders"
+            element={
+              <AdminRoute>
+                <OrdersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="products"
+            element={
+              <AdminRoute>
+                <ProductsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="users"
+            element={
+              <AdminRoute>
+                <UsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="analytics"
+            element={
+              <AdminRoute>
+                <AnalyticsPage />
+              </AdminRoute>
+            }
+          />
         </Route>
       </Route>
     </Routes>

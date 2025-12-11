@@ -1,45 +1,62 @@
-﻿from django.db.models import Sum
+﻿from django.db.models import Sum, Q
 from django.utils.timezone import now
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from orders.models import HoaDonXuat, ChiTietHDX
+from cart.commerce_models import Order, OrderItem
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def doanh_thu_hom_nay(request):
     today = now().date()
 
-    tong_tien = 0
-    for hd in HoaDonXuat.objects.filter(ngay=today):
-        for ct in hd.chitiethdx_set.all():
-            tong_tien += ct.so_luong * ct.xe.gia
+    # Tính doanh thu từ các đơn hàng đã thanh toán hôm nay
+    orders_today = Order.objects.filter(
+        created_at__date=today,
+        payment_status="paid"
+    )
+    
+    tong_tien = sum(order.total_price for order in orders_today)
 
-    return Response({"ngay": str(today), "doanh_thu": tong_tien})
+    return Response({"ngay": str(today), "doanh_thu": float(tong_tien)})
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def doanh_thu_thang(request, year, month):
-    doanh_thu = 0
-    for hd in HoaDonXuat.objects.filter(ngay__year=year, ngay__month=month):
-        for ct in hd.chitiethdx_set.all():
-            doanh_thu += ct.so_luong * ct.xe.gia
-    return Response({"nam": year, "thang": month, "doanh_thu": doanh_thu})
+    # Tính doanh thu từ các đơn hàng đã thanh toán trong tháng
+    orders_month = Order.objects.filter(
+        created_at__year=year,
+        created_at__month=month,
+        payment_status="paid"
+    )
+    
+    doanh_thu = sum(order.total_price for order in orders_month)
+    return Response({"nam": year, "thang": month, "doanh_thu": float(doanh_thu)})
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def tong_xe_da_ban(request):
-    total = ChiTietHDX.objects.aggregate(total_sold=Sum("so_luong"))["total_sold"] or 0
+    # Tính tổng số xe đã bán từ các đơn hàng đã thanh toán
+    total = OrderItem.objects.filter(
+        order__payment_status="paid"
+    ).aggregate(total_sold=Sum("quantity"))["total_sold"] or 0
     return Response({"tong_xe_da_ban": total})
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def top_xe_ban_chay(request):
+    # Lấy top 5 xe bán chạy từ các đơn hàng đã thanh toán
     top = (
-        ChiTietHDX.objects.values("xe__ten_xe")
-        .annotate(total_sold=Sum("so_luong"))
+        OrderItem.objects.filter(order__payment_status="paid")
+        .values("xe__ten_xe")
+        .annotate(total_sold=Sum("quantity"))
         .order_by("-total_sold")[:5]
     )
-    return Response(top)
+    return Response(list(top))
 
 

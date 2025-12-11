@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import authApi from "../api/authApi";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,6 +37,17 @@ export default function Login() {
 
       localStorage.setItem("access_token", res.data.access);
       localStorage.setItem("refresh_token", res.data.refresh);
+
+      // Fetch user role and update context
+      try {
+        const roleRes = await authApi.getUserRole();
+        updateUser({
+          username: roleRes.data.username,
+          role: roleRes.data.role || "user",
+        });
+      } catch (roleError) {
+        console.error("Error fetching user role:", roleError);
+      }
 
       const redirect = location.state?.from?.pathname || "/";
       navigate(redirect, { replace: true });

@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-const CarCard = ({ car }) => {
+const CarCard = ({ car, navigateTo = "category" }) => {
+  // navigateTo: "category" (từ Home) hoặc "detail" (từ Category)
   const navigate = useNavigate();
   const location = useLocation();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -48,21 +49,30 @@ const CarCard = ({ car }) => {
     return "/images/img_car.png";
   };
 
+  const handleCardClick = () => {
+    if (navigateTo === "detail") {
+      navigate(`/detail/${car.ma_xe || car.id}`);
+    } else {
+      navigate("/category");
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative bg-gray-50">
-        <Link to={`/detail/${car.ma_xe || car.id}`}>
-          <div className="w-full h-56 flex items-center justify-center overflow-hidden">
-            <img
-              src={getImageUrl()}
-              alt={car.ten_xe || "Car"}
-              className="w-full h-full object-contain p-4"
-              onError={(e) => {
-                e.target.src = "/images/img_car.png";
-              }}
-            />
-          </div>
-        </Link>
+        <div 
+          onClick={handleCardClick}
+          className="w-full h-56 flex items-center justify-center overflow-hidden cursor-pointer"
+        >
+          <img
+            src={getImageUrl()}
+            alt={car.ten_xe || "Car"}
+            className="w-full h-full object-contain p-4"
+            onError={(e) => {
+              e.target.src = "/images/img_car.png";
+            }}
+          />
+        </div>
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -89,7 +99,10 @@ const CarCard = ({ car }) => {
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-800">
+            <h3 
+              onClick={handleCardClick}
+              className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+            >
               {car.ten_xe || "Tên xe"}
             </h3>
             <p className="text-sm text-gray-500 mt-1">
@@ -173,16 +186,22 @@ const CarCard = ({ car }) => {
           </div>
           <button
             onClick={() => {
-              const token = localStorage.getItem("access_token");
-              if (!token) {
-                navigate("/login", { state: { from: location } });
-                return;
+              if (navigateTo === "detail") {
+                // Từ Category: đi đến Detail
+                const token = localStorage.getItem("access_token");
+                if (!token) {
+                  navigate("/login", { state: { from: location } });
+                  return;
+                }
+                navigate(`/detail/${car.ma_xe || car.id}`);
+              } else {
+                // Từ Home: đi đến Category
+                navigate("/category");
               }
-              navigate(`/detail/${car.ma_xe || car.id}`);
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
           >
-            Rent Now
+            {navigateTo === "detail" ? "Rent Now" : "View All"}
           </button>
         </div>
       </div>

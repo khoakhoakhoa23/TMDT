@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role
+from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet, CartViewSet, CartItemViewSet, OrderViewSet, checkout
 from payments.views import PaymentViewSet, payment_callback
 from core.views import upload_media
@@ -19,6 +19,7 @@ router.register(r"payment", PaymentViewSet, basename="payment")
 router.register(r"nhanvien", NhanVienViewSet)
 router.register(r"khachhang", KhachHangViewSet)
 router.register(r"ncc", NCCViewSet)
+router.register(r"accounts", UserViewSet, basename="accounts")
 router.register(r"hoadonnhap", HoaDonNhapViewSet)
 router.register(r"chitiethdn", ChiTietHDNViewSet)
 router.register(r"hoadonxuat", HoaDonXuatViewSet)
