@@ -30,16 +30,7 @@ const Home = () => {
   };
 
   const handleHeroRentNow = () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      navigate("/login", { state: { from: location } });
-      return;
-    }
-    const targetCar = popularCars[0] || recommendationCars[0];
-    if (targetCar) {
-      navigate(`/detail/${targetCar.ma_xe || targetCar.id}`);
-      return;
-    }
+    // Điều hướng đến Category theo luồng: Home → Category → Detail
     navigate("/category");
   };
 

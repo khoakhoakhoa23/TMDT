@@ -21,17 +21,34 @@ const Category = () => {
 
   const fetchCars = async () => {
     try {
+      setLoading(true);
       const response = await axiosClient.get("xe/");
-      setCars(response.data.results || response.data);
-      setFilteredCars(response.data.results || response.data);
+      const carsData = response.data.results || response.data || [];
+      
+      // Đảm bảo carsData là array
+      if (Array.isArray(carsData)) {
+        setCars(carsData);
+        setFilteredCars(carsData);
+      } else {
+        console.error("Invalid response format:", response.data);
+        setCars([]);
+        setFilteredCars([]);
+      }
     } catch (error) {
       console.error("Error fetching cars:", error);
+      setCars([]);
+      setFilteredCars([]);
     } finally {
       setLoading(false);
     }
   };
 
   const applyFilters = () => {
+    if (!cars || cars.length === 0) {
+      setFilteredCars([]);
+      return;
+    }
+    
     let filtered = [...cars];
 
     // Filter by TYPE
@@ -41,7 +58,13 @@ const Category = () => {
       );
       if (selectedTypes.length > 0 && selectedTypes.length < Object.keys(filters.types).length) {
         filtered = filtered.filter((car) => {
-          const carType = (car.loai_xe?.ten_loai || "").toLowerCase();
+          // Xử lý cả object và nested object
+          const carType = (
+            car.loai_xe?.ten_loai || 
+            car.loai_xe_detail?.ten_loai || 
+            (typeof car.loai_xe === 'object' && car.loai_xe?.ten_loai) ||
+            ""
+          ).toLowerCase();
           return selectedTypes.some((type) => carType.includes(type.toLowerCase()));
         });
       }
@@ -113,14 +136,17 @@ const Category = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-lg text-gray-600">Đang tải...</div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <div className="text-lg text-gray-600">Đang tải danh sách xe...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Pick-Up/Drop-Off Form */}
       <PickupDropoffForm />
 
@@ -132,31 +158,41 @@ const Category = () => {
 
         {/* Car Grid */}
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredCars.length > 0 ? (
-              filteredCars.slice(0, visibleCount).map((car) => (
-                <CarCard key={car.ma_xe || car.id} car={car} />
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12 text-gray-500">
-                Không tìm thấy xe nào
-              </div>
-            )}
-          </div>
-
-          {filteredCars.length > 0 && (
-            <div className="mt-8 flex items-center justify-between">
-              <button
-                onClick={handleShowMore}
-                disabled={visibleCount >= filteredCars.length}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
-              >
-                {visibleCount >= filteredCars.length ? "No more cars" : "Show more car"}
-              </button>
-              <span className="text-gray-600">
-                Showing {Math.min(visibleCount, filteredCars.length)} of {filteredCars.length} Cars
-              </span>
+          {cars.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-md p-12 text-center">
+              <p className="text-gray-500 text-lg mb-4">Chưa có xe nào trong danh sách</p>
+              <p className="text-gray-400 text-sm">Vui lòng thử lại sau</p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredCars.length > 0 ? (
+                  filteredCars.slice(0, visibleCount).map((car) => (
+                    <CarCard key={car.ma_xe || car.id} car={car} navigateTo="detail" />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-lg shadow-md">
+                    <p className="text-lg mb-2">Không tìm thấy xe nào phù hợp với bộ lọc</p>
+                    <p className="text-sm text-gray-400">Vui lòng thử điều chỉnh bộ lọc</p>
+                  </div>
+                )}
+              </div>
+
+              {filteredCars.length > 0 && (
+                <div className="mt-8 flex items-center justify-between bg-white rounded-lg shadow-md p-4">
+                  <button
+                    onClick={handleShowMore}
+                    disabled={visibleCount >= filteredCars.length}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+                  >
+                    {visibleCount >= filteredCars.length ? "No more cars" : "Show more car"}
+                  </button>
+                  <span className="text-gray-600">
+                    Showing {Math.min(visibleCount, filteredCars.length)} of {filteredCars.length} Cars
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

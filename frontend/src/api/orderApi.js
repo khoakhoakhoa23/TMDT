@@ -23,6 +23,18 @@ const orderApi = {
   getMyOrders() {
     return axiosClient.get("order/");
   },
+
+  updateStatus(id, status) {
+    return axiosClient.patch(`order/${id}/`, { status });
+  },
+
+  update(id, data) {
+    return axiosClient.put(`order/${id}/`, data);
+  },
+
+  patch(id, data) {
+    return axiosClient.patch(`order/${id}/`, data);
+  },
 };
 
 export default orderApi;

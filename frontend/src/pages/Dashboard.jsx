@@ -24,7 +24,12 @@ const Dashboard = () => {
       const orders = response.data.results || response.data || [];
       // Sort by created_at descending and take first 4
       const sortedOrders = orders
-        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .filter(order => order && order.id) // Chỉ lấy orders hợp lệ
+        .sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        })
         .slice(0, 4);
       setRecentTransactions(sortedOrders);
     } catch (error) {
@@ -37,15 +42,23 @@ const Dashboard = () => {
     try {
       const response = await orderApi.getAll();
       const orders = response.data.results || response.data || [];
-      if (orders && orders.length > 0) {
+      if (orders && Array.isArray(orders) && orders.length > 0) {
         // Lấy order có rental info gần nhất
-        const orderWithRental = orders.find(
-          (o) => o.pickup_location || o.start_date || o.end_date
-        ) || orders[0];
-        setLatestOrder(orderWithRental);
+        const validOrders = orders.filter(o => o && o.id);
+        if (validOrders.length > 0) {
+          const orderWithRental = validOrders.find(
+            (o) => o.pickup_location || o.start_date || o.end_date
+          ) || validOrders[0];
+          setLatestOrder(orderWithRental);
+        } else {
+          setLatestOrder(null);
+        }
+      } else {
+        setLatestOrder(null);
       }
     } catch (error) {
       console.error("Error fetching latest order:", error);
+      setLatestOrder(null);
     } finally {
       setLoading(false);
     }
@@ -65,25 +78,49 @@ const Dashboard = () => {
       const statsMap = {};
       let total = 0;
       
-      orders.forEach((order) => {
-        order.items?.forEach((item) => {
-          const car = item.xe;
-          if (car && car.loai_xe) {
-            const carType = car.loai_xe.ten_loai || car.loai_xe_detail?.ten_loai || "Unknown";
-            if (!statsMap[carType]) {
-              statsMap[carType] = 0;
-            }
-            statsMap[carType] += item.quantity || 1;
-            total += item.quantity || 1;
+      // Chỉ xử lý orders hợp lệ
+      if (Array.isArray(orders)) {
+        orders.forEach((order) => {
+          if (order && order.items && Array.isArray(order.items)) {
+            order.items.forEach((item) => {
+              if (item && item.xe) {
+                const car = item.xe;
+                // Kiểm tra loai_xe có thể là object hoặc nested object
+                const carType = car.loai_xe?.ten_loai || 
+                               car.loai_xe_detail?.ten_loai || 
+                               (typeof car.loai_xe === 'string' ? car.loai_xe : "Unknown");
+                if (carType && carType !== "Unknown") {
+                  if (!statsMap[carType]) {
+                    statsMap[carType] = 0;
+                  }
+                  statsMap[carType] += item.quantity || 1;
+                  total += item.quantity || 1;
+                }
+              }
+            });
           }
         });
-      });
+      }
       
       // Convert to array and sort by value
       const statsArray = Object.entries(statsMap)
         .map(([label, value]) => ({ label, value }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 5); // Top 5
+      
+      // Nếu không có dữ liệu, dùng default
+      if (statsArray.length === 0) {
+        const defaultData = [
+          { label: "Sport Car", value: 0, color: "#3B82F6" },
+          { label: "SUV", value: 0, color: "#60A5FA" },
+          { label: "Coupe", value: 0, color: "#93C5FD" },
+          { label: "Hatchback", value: 0, color: "#DBEAFE" },
+          { label: "MPV", value: 0, color: "#EFF6FF" },
+        ];
+        setCarRentalStats(defaultData);
+        setTotalRentals(0);
+        return;
+      }
       
       // Assign colors
       const colors = ["#3B82F6", "#60A5FA", "#93C5FD", "#DBEAFE", "#EFF6FF"];
@@ -98,19 +135,23 @@ const Dashboard = () => {
       console.error("Error fetching car rental stats:", error);
       // Fallback to default data
       const defaultData = [
-        { label: "Sport Car", value: 17439, color: "#3B82F6" },
-        { label: "SUV", value: 9478, color: "#60A5FA" },
-        { label: "Coupe", value: 18197, color: "#93C5FD" },
-        { label: "Hatchback", value: 12510, color: "#DBEAFE" },
-        { label: "MPV", value: 14406, color: "#EFF6FF" },
+        { label: "Sport Car", value: 0, color: "#3B82F6" },
+        { label: "SUV", value: 0, color: "#60A5FA" },
+        { label: "Coupe", value: 0, color: "#93C5FD" },
+        { label: "Hatchback", value: 0, color: "#DBEAFE" },
+        { label: "MPV", value: 0, color: "#EFF6FF" },
       ];
       setCarRentalStats(defaultData);
-      setTotalRentals(defaultData.reduce((sum, item) => sum + item.value, 0));
+      setTotalRentals(0);
     }
   };
 
   const handleTransactionClick = (transaction) => {
-    const carId = transaction.items?.[0]?.xe?.ma_xe || transaction.items?.[0]?.xe?.id;
+    if (!transaction || !transaction.items || !Array.isArray(transaction.items) || transaction.items.length === 0) {
+      navigate("/category");
+      return;
+    }
+    const carId = transaction.items[0]?.xe?.ma_xe || transaction.items[0]?.xe?.id;
     if (carId) {
       navigate(`/detail/${carId}`);
       return;
@@ -177,7 +218,7 @@ const Dashboard = () => {
           </div>
 
           {/* Car Info */}
-          {latestOrder && latestOrder.items && latestOrder.items[0] && (
+          {latestOrder && latestOrder.items && Array.isArray(latestOrder.items) && latestOrder.items.length > 0 && latestOrder.items[0]?.xe && (
             <div className="bg-blue-50 rounded-lg p-4 mb-6 flex items-center space-x-4">
               <img
                 src={getImageUrl(
@@ -199,122 +240,162 @@ const Dashboard = () => {
           )}
 
           {/* Pick-Up Details */}
-          <div className="mb-4">
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-              <span className="font-semibold">Pick - Up</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4 ml-5">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Locations</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>{latestOrder?.pickup_location || "N/A"}</span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+          {latestOrder && (
+            <>
+              <div className="mb-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                  <span className="font-semibold">Pick - Up</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 ml-5">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Locations</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>{latestOrder?.pickup_location || "N/A"}</span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Date</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>
+                        {latestOrder?.start_date
+                          ? new Date(latestOrder.start_date).toLocaleDateString("en-US", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Time</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>
+                        {latestOrder?.start_date
+                          ? new Date(latestOrder.start_date).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            }).replace(":", ".")
+                          : "07.00"}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Date</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>
-                    {latestOrder?.start_date
-                      ? new Date(latestOrder.start_date).toLocaleDateString("en-US", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })
-                      : "N/A"}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Time</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>
-                    {latestOrder?.start_date
-                      ? new Date(latestOrder.start_date).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        }).replace(":", ".")
-                      : "07.00"}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Drop-Off Details */}
-          <div className="mb-6">
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-              <span className="font-semibold">Drop - Off</span>
+              {/* Drop-Off Details */}
+              <div className="mb-6">
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                  <span className="font-semibold">Drop - Off</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 ml-5">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Locations</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>{latestOrder?.return_location || "N/A"}</span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Date</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>
+                        {latestOrder?.end_date
+                          ? new Date(latestOrder.end_date).toLocaleDateString("en-US", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Time</label>
+                    <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
+                      <span>
+                        {latestOrder?.end_date
+                          ? new Date(latestOrder.end_date).toLocaleTimeString("en-US", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            }).replace(":", ".")
+                          : "01.00"}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!latestOrder && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+              <p>Chưa có đơn hàng nào</p>
             </div>
-            <div className="grid grid-cols-3 gap-4 ml-5">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Locations</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>{latestOrder?.return_location || "N/A"}</span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Date</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>
-                    {latestOrder?.end_date
-                      ? new Date(latestOrder.end_date).toLocaleDateString("en-US", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })
-                      : "N/A"}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Time</label>
-                <div className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 flex items-center justify-between">
-                  <span>
-                    {latestOrder?.end_date
-                      ? new Date(latestOrder.end_date).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: false,
-                        }).replace(":", ".")
-                      : "01.00"}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Total Rental Price */}
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-600">Overall price and includes rental discount</p>
+          {latestOrder && (
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-gray-600">Overall price and includes rental discount</p>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  {(() => {
+                    if (!latestOrder.items || !Array.isArray(latestOrder.items) || !latestOrder.items[0]?.xe) {
+                      return "$0.00";
+                    }
+                    
+                    // Tính số ngày thuê
+                    const days = latestOrder.rental_days || (latestOrder.start_date && latestOrder.end_date
+                      ? Math.ceil(
+                          (new Date(latestOrder.end_date) - new Date(latestOrder.start_date)) /
+                            (1000 * 60 * 60 * 24)
+                        )
+                      : 1);
+                    
+                    // Lấy giá mỗi ngày từ xe
+                    const car = latestOrder.items[0].xe;
+                    const pricePerDay = car?.gia_thue || car?.gia_khuyen_mai || car?.gia || 0;
+                    
+                    // Tính tổng tiền = giá mỗi ngày * số ngày
+                    const calculatedTotal = pricePerDay * days;
+                    
+                    // Ưu tiên dùng total_price từ backend nếu có và hợp lý
+                    let finalTotal = latestOrder.total_price || 0;
+                    
+                    if (finalTotal === 0 || (calculatedTotal > 0 && finalTotal < calculatedTotal)) {
+                      finalTotal = calculatedTotal;
+                    }
+                    
+                    return finalTotal > 0 ? `$${(finalTotal / 23000).toFixed(2)}` : "$0.00";
+                  })()}
+                </p>
               </div>
-              <p className="text-2xl font-bold text-blue-600">
-                ${latestOrder?.total_price ? (latestOrder.total_price / 23000).toFixed(2) : "0.00"}
-              </p>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Top 5 Car Rental Chart */}
@@ -393,7 +474,10 @@ const Dashboard = () => {
         <div className="space-y-4">
           {recentTransactions.length > 0 ? (
             recentTransactions.map((transaction) => {
-              const car = transaction.items?.[0]?.xe;
+              if (!transaction || !transaction.id) return null;
+              const car = transaction.items && Array.isArray(transaction.items) && transaction.items[0] 
+                ? transaction.items[0].xe 
+                : null;
               return (
                 <div
                   key={transaction.id}
@@ -431,7 +515,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               );
-            })
+            }).filter(Boolean)
           ) : (
             <p className="text-gray-500 text-center py-8">No recent transactions</p>
           )}

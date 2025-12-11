@@ -16,7 +16,13 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
     // Tính TYPE options
     const typeCounts = {};
     cars.forEach((car) => {
-      const type = (car.loai_xe?.ten_loai || "").toLowerCase();
+      // Xử lý cả object và nested object
+      const type = (
+        car.loai_xe?.ten_loai || 
+        car.loai_xe_detail?.ten_loai || 
+        (typeof car.loai_xe === 'object' && car.loai_xe?.ten_loai) ||
+        ""
+      ).toLowerCase();
       if (type) {
         typeCounts[type] = (typeCounts[type] || 0) + 1;
       }

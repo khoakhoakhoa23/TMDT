@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "xe/",
   "loaixe/",
   "blog/",
+  "location/",
 ];
 
 // Tự động gắn token vào request

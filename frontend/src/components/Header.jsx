@@ -1,18 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [token, setToken] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const token = localStorage.getItem("access_token");
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    setToken(localStorage.getItem("access_token"));
+  }, [location.pathname]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/category?search=${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    setToken(null);
+    setShowProfileMenu(false);
+    navigate("/", { replace: true });
   };
 
   return (
@@ -150,41 +178,101 @@ const Header = () => {
               </svg>
             </button>
 
-            {/* Profile Picture */}
-            {token ? (
-              <Link
-                to="/dashboard"
-                className="w-10 h-10 rounded-full border-2 border-gray-300 overflow-hidden hover:border-blue-500 transition-colors"
+            {/* Profile Picture with Dropdown */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-10 h-10 rounded-full border-2 border-gray-300 overflow-hidden hover:border-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <img
-                  src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=128"
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src = "https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=128";
-                  }}
-                />
-              </Link>
-            ) : (
-              <Link
-                to="/login"
-                className="w-10 h-10 rounded-full border-2 border-gray-300 overflow-hidden hover:border-blue-500 transition-colors flex items-center justify-center bg-gray-100"
-              >
-                <svg
-                  className="w-6 h-6 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                {token ? (
+                  <img
+                    src="https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=128"
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = "https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=128";
+                    }}
                   />
-                </svg>
-              </Link>
-            )}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </button>
+
+              {/* Dropdown Menu */}
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  {token ? (
+                    <>
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <span>My Dashboard</span>
+                        </div>
+                      </Link>
+                      <div className="border-t border-gray-200 my-1"></div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          <span>Logout</span>
+                        </div>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/login"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                          </svg>
+                          <span>Đăng nhập</span>
+                        </div>
+                      </Link>
+                      <Link
+                        to="/register"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                          </svg>
+                          <span>Đăng ký</span>
+                        </div>
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -210,4 +210,10 @@ SIMPLE_JWT = {
 DJOSER = {
     "USER_CREATE_PASSWORD_RETYPE": False,
     "LOGIN_FIELD": "username",
+    "PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND": False,
+    "SEND_ACTIVATION_EMAIL": False,
+    "PASSWORD_RESET_CONFIRM_URL": "password-reset/{uid}/{token}/",
+    "ACTIVATION_URL": "activation/{uid}/{token}/",
+    "TOKEN_MODEL": None, 
+
 }

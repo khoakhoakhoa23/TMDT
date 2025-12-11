@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from users.models import NhanVien, KhachHang, NCC
 from users.serializers import NhanVienSerializer, KhachHangSerializer, NCCSerializer
@@ -14,7 +14,7 @@ class NhanVienViewSet(viewsets.ModelViewSet):
 class KhachHangViewSet(viewsets.ModelViewSet):
     queryset = KhachHang.objects.all()
     serializer_class = KhachHangSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
 
 class NCCViewSet(viewsets.ModelViewSet):
