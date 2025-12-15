@@ -134,22 +134,22 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
     <div className="mb-8">
       <div className="flex flex-col md:flex-row gap-4 items-center md:items-stretch">
         {/* Pick-Up Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex-1 w-full md:w-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 flex-1 w-full md:w-auto border border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <div className="flex items-center space-x-2 mb-4">
-            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-            <span className="font-bold text-gray-800 text-lg">Pick-Up</span>
+            <div className="w-3 h-3 bg-blue-600 dark:bg-blue-500 rounded-full transition-colors duration-300"></div>
+            <span className="font-bold text-gray-800 dark:text-gray-100 text-lg transition-colors duration-300">Pick-Up</span>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Locations</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Locations</label>
               <div className="relative">
                 <select
                   value={pickup.location}
                   onChange={(e) => handlePickupChange("location", e.target.value)}
                   disabled={loadingLocations}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white ${
-                    errors.pickupLocation ? "border-red-500" : "border-gray-300"
-                  } ${loadingLocations ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                    errors.pickupLocation ? "border-red-500 dark:border-red-400" : ""
+                  } ${loadingLocations ? "opacity-50 cursor-not-allowed" : ""} transition-colors duration-300`}
                 >
                   <option value="">Select your city</option>
                   {locations.map((loc) => (
@@ -159,41 +159,41 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
                   ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
               {errors.pickupLocation && (
-                <p className="text-xs text-red-500 mt-1">{errors.pickupLocation}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.pickupLocation}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Date</label>
               <div className="relative">
                 <input
                   type="date"
                   value={pickup.date}
                   min={today}
                   onChange={(e) => handlePickupChange("date", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.pickupDate ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                    errors.pickupDate ? "border-red-500 dark:border-red-400" : ""
+                  } transition-colors duration-300`}
                 />
               </div>
               {errors.pickupDate && (
-                <p className="text-xs text-red-500 mt-1">{errors.pickupDate}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.pickupDate}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Time</label>
               <div className="relative">
                 <select
                   value={pickup.time}
                   onChange={(e) => handlePickupChange("time", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white ${
-                    errors.pickupTime ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                    errors.pickupTime ? "border-red-500 dark:border-red-400" : ""
+                  } transition-colors duration-300`}
                 >
                   <option value="">Select your time</option>
                   {TIME_SLOTS.map((time) => (
@@ -203,13 +203,13 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
                   ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
               {errors.pickupTime && (
-                <p className="text-xs text-red-500 mt-1">{errors.pickupTime}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.pickupTime}</p>
               )}
             </div>
           </div>
@@ -219,7 +219,7 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
         <div className="flex justify-center items-center">
           <button
             onClick={handleSwap}
-            className="w-14 h-14 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-md hover:shadow-lg"
+            className="w-14 h-14 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 flex items-center justify-center shadow-md dark:shadow-none hover:shadow-lg dark:hover:shadow-none"
             title="Swap Pick-Up and Drop-Off"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,22 +234,22 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
         </div>
 
         {/* Drop-Off Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 flex-1 w-full md:w-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 flex-1 w-full md:w-auto border border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <div className="flex items-center space-x-2 mb-4">
-            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-            <span className="font-bold text-gray-800 text-lg">Drop - Off</span>
+            <div className="w-3 h-3 bg-blue-600 dark:bg-blue-500 rounded-full transition-colors duration-300"></div>
+            <span className="font-bold text-gray-800 dark:text-gray-100 text-lg transition-colors duration-300">Drop - Off</span>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Locations</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Locations</label>
               <div className="relative">
                 <select
                   value={dropoff.location}
                   onChange={(e) => handleDropoffChange("location", e.target.value)}
                   disabled={loadingLocations}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white ${
-                    errors.dropoffLocation ? "border-red-500" : "border-gray-300"
-                  } ${loadingLocations ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                    errors.dropoffLocation ? "border-red-500 dark:border-red-400" : ""
+                  } ${loadingLocations ? "opacity-50 cursor-not-allowed" : ""} transition-colors duration-300`}
                 >
                   <option value="">Select your city</option>
                   {locations.map((loc) => (
@@ -259,39 +259,39 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
                   ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
               {errors.dropoffLocation && (
-                <p className="text-xs text-red-500 mt-1">{errors.dropoffLocation}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.dropoffLocation}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Date</label>
               <input
                 type="date"
                 value={dropoff.date}
                 min={pickup.date || today}
                 onChange={(e) => handleDropoffChange("date", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.dropoffDate ? "border-red-500" : "border-gray-300"
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                  errors.dropoffDate ? "border-red-500 dark:border-red-400" : ""
+                } transition-colors duration-300`}
               />
               {errors.dropoffDate && (
-                <p className="text-xs text-red-500 mt-1">{errors.dropoffDate}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.dropoffDate}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Time</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">Time</label>
               <div className="relative">
                 <select
                   value={dropoff.time}
                   onChange={(e) => handleDropoffChange("time", e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white ${
-                    errors.dropoffTime ? "border-red-500" : "border-gray-300"
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 appearance-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                    errors.dropoffTime ? "border-red-500 dark:border-red-400" : ""
+                  } transition-colors duration-300`}
                 >
                   <option value="">Select your time</option>
                   {TIME_SLOTS.map((time) => (
@@ -301,13 +301,13 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
                   ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
               {errors.dropoffTime && (
-                <p className="text-xs text-red-500 mt-1">{errors.dropoffTime}</p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{errors.dropoffTime}</p>
               )}
             </div>
           </div>

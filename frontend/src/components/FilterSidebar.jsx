@@ -142,12 +142,12 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 sticky top-20">
-      <h2 className="text-xl font-bold mb-6">Filters</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 sticky top-20 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-gray-100 transition-colors duration-300">Filters</h2>
 
       {/* TYPE */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">TYPE</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">TYPE</h3>
         <div className="space-y-2">
           {Object.keys(filters.types).length > 0 ? (
             Object.keys(filters.types)
@@ -161,23 +161,23 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
                       type="checkbox"
                       checked={filters.types[typeKey] || false}
                       onChange={() => handleTypeChange(typeKey)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 dark:text-blue-500 rounded focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 transition-colors duration-300"
                     />
-                    <span className="ml-2 text-gray-700">
+                    <span className="ml-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                       {label} ({count})
                     </span>
                   </label>
                 );
               })
           ) : (
-            <p className="text-sm text-gray-500">Không có dữ liệu</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Không có dữ liệu</p>
           )}
         </div>
       </div>
 
       {/* CAPACITY */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">CAPACITY</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">CAPACITY</h3>
         <div className="space-y-2">
           {Object.keys(filters.capacity).length > 0 ? (
             Object.keys(filters.capacity)
@@ -195,23 +195,23 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
                       type="checkbox"
                       checked={filters.capacity[capacityKey] || false}
                       onChange={() => handleCapacityChange(capacityKey)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 dark:text-blue-500 rounded focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 transition-colors duration-300"
                     />
-                    <span className="ml-2 text-gray-700">
+                    <span className="ml-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                       {label} ({count})
                     </span>
                   </label>
                 );
               })
           ) : (
-            <p className="text-sm text-gray-500">Không có dữ liệu</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Không có dữ liệu</p>
           )}
         </div>
       </div>
 
       {/* FUEL */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">FUEL</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">FUEL</h3>
         <div className="space-y-2">
           {Object.keys(filters.fuel).length > 0 ? (
             Object.keys(filters.fuel)
@@ -225,23 +225,23 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
                       type="checkbox"
                       checked={filters.fuel[fuelKey] || false}
                       onChange={() => handleFuelChange(fuelKey)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 dark:text-blue-500 rounded focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 transition-colors duration-300"
                     />
-                    <span className="ml-2 text-gray-700">
+                    <span className="ml-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                       {label} ({count})
                     </span>
                   </label>
                 );
               })
           ) : (
-            <p className="text-sm text-gray-500">Không có dữ liệu</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Không có dữ liệu</p>
           )}
         </div>
       </div>
 
       {/* TRANSMISSION */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">TRANSMISSION</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">TRANSMISSION</h3>
         <div className="space-y-2">
           {Object.keys(filters.transmission).length > 0 ? (
             Object.keys(filters.transmission)
@@ -255,32 +255,32 @@ const FilterSidebar = ({ onFilterChange, cars = [] }) => {
                       type="checkbox"
                       checked={filters.transmission[transKey] || false}
                       onChange={() => handleTransmissionChange(transKey)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 dark:text-blue-500 rounded focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 transition-colors duration-300"
                     />
-                    <span className="ml-2 text-gray-700">
+                    <span className="ml-2 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                       {label} ({count})
                     </span>
                   </label>
                 );
               })
           ) : (
-            <p className="text-sm text-gray-500">Không có dữ liệu</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">Không có dữ liệu</p>
           )}
         </div>
       </div>
 
       {/* PRICE */}
       <div>
-        <h3 className="font-semibold text-gray-700 mb-3">PRICE</h3>
+        <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 transition-colors duration-300">PRICE</h3>
         <input
           type="range"
           min="0"
           max="200"
           value={filters.maxPrice}
           onChange={handlePriceChange}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:accent-blue-500 transition-colors duration-300"
         />
-        <div className="mt-2 text-sm text-gray-600">
+        <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
           Max. ${filters.maxPrice.toFixed(2)}
         </div>
       </div>

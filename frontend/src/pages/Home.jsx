@@ -37,19 +37,19 @@ const Home = () => {
   return (
     <div>
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16 mb-8 rounded-lg relative overflow-hidden">
+      <section className="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 text-white py-16 mb-8 rounded-lg relative overflow-hidden transition-colors duration-300">
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
                 The Best Platform for Car Rental
               </h1>
-              <p className="text-lg md:text-xl mb-6 text-blue-100">
+              <p className="text-lg md:text-xl mb-6 text-blue-100 dark:text-blue-200">
                 Ease of doing a car rental safely and reliably. Of course at a low price.
               </p>
               <button
                 onClick={handleHeroRentNow}
-                className="inline-block px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                className="inline-block px-8 py-3 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
               >
                 Rental Now
               </button>
@@ -71,10 +71,10 @@ const Home = () => {
       {/* Popular Car Section */}
       <section className="mb-12">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">Popular Car</h2>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Popular Car</h2>
           <Link
             to="/category"
-            className="text-blue-600 hover:text-blue-700 font-semibold"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors duration-300"
           >
             View All
           </Link>
@@ -82,7 +82,7 @@ const Home = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-600">Đang tải...</div>
+            <div className="text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải...</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -96,10 +96,10 @@ const Home = () => {
       {/* Recommendation Car Section */}
       <section className="mb-12">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold">Recommendation Car</h2>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recommendation Car</h2>
           <Link
             to="/category"
-            className="text-blue-600 hover:text-blue-700 font-semibold"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors duration-300"
           >
             View All
           </Link>
@@ -107,7 +107,7 @@ const Home = () => {
 
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="text-lg text-gray-600">Đang tải...</div>
+            <div className="text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải...</div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

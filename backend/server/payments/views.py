@@ -9,7 +9,7 @@ from django.db import transaction
 from payments.models import Payment
 from payments.serializers import PaymentSerializer, PaymentCreateSerializer
 from payments.payment_gateways import get_payment_gateway
-from cart.commerce_models import Order
+from orders.models import Order
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
@@ -124,6 +124,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     payment.order.payment_status = "paid"
                     payment.order.status = "paid"
                     payment.order.save()
+                    
+                    # Tạo notification thanh toán thành công
+                    try:
+                        from core.notifications import create_payment_success_notification
+                        create_payment_success_notification(payment.order, payment)
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Không thể tạo payment notification: {str(e)}")
                 
                 return Response({"RspCode": "00", "Message": "Success"})
             else:

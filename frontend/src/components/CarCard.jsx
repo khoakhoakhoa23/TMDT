@@ -1,11 +1,28 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import wishlistApi from "../api/wishlistApi";
 
 const CarCard = ({ car, navigateTo = "category" }) => {
   // navigateTo: "category" (từ Home) hoặc "detail" (từ Category)
   const navigate = useNavigate();
   const location = useLocation();
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Kiểm tra xem xe có trong wishlist không
+  useEffect(() => {
+    const checkWishlist = async () => {
+      const carId = car.ma_xe || car.id;
+      if (carId) {
+        try {
+          const response = await wishlistApi.check(carId);
+          setIsFavorite(response.data.in_wishlist || false);
+        } catch (error) {
+          console.error("Error checking wishlist:", error);
+        }
+      }
+    };
+    checkWishlist();
+  }, [car]);
 
   // Debug: Log dữ liệu xe để kiểm tra (uncomment để debug)
   // console.log('Car data:', car);
@@ -58,8 +75,8 @@ const CarCard = ({ car, navigateTo = "category" }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative bg-gray-50">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none overflow-hidden hover:shadow-lg dark:hover:shadow-none transition-all duration-300 border border-gray-200 dark:border-gray-700">
+      <div className="relative bg-gray-50 dark:bg-gray-900/50">
         <div 
           onClick={handleCardClick}
           className="w-full h-56 flex items-center justify-center overflow-hidden cursor-pointer"
@@ -74,14 +91,39 @@ const CarCard = ({ car, navigateTo = "category" }) => {
           />
         </div>
         <button
-          onClick={(e) => {
+          onClick={async (e) => {
             e.preventDefault();
-            setIsFavorite(!isFavorite);
+            e.stopPropagation();
+            try {
+              if (isFavorite) {
+                // Xóa khỏi wishlist
+                const wishlistData = localStorage.getItem("wishlist");
+                if (wishlistData) {
+                  const items = JSON.parse(wishlistData);
+                  const carId = car.ma_xe || car.id;
+                  const itemToRemove = items.find(item => {
+                    const itemCarId = item.car?.ma_xe || item.car?.id || item.ma_xe || item.id;
+                    return itemCarId === carId;
+                  });
+                  if (itemToRemove) {
+                    await wishlistApi.remove(itemToRemove.id);
+                  }
+                }
+                setIsFavorite(false);
+              } else {
+                // Thêm vào wishlist
+                await wishlistApi.add(car);
+                setIsFavorite(true);
+              }
+            } catch (error) {
+              console.error("Error toggling wishlist:", error);
+            }
           }}
-          className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+          className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md dark:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 z-10 border border-gray-200 dark:border-gray-700"
+          title={isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
         >
           <svg
-            className={`w-5 h-5 ${isFavorite ? "text-red-500 fill-current" : "text-gray-600"}`}
+            className={`w-5 h-5 ${isFavorite ? "text-red-500 fill-current" : "text-gray-600 dark:text-gray-300"} transition-colors duration-300`}
             fill={isFavorite ? "currentColor" : "none"}
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -101,20 +143,20 @@ const CarCard = ({ car, navigateTo = "category" }) => {
           <div className="flex-1">
             <h3 
               onClick={handleCardClick}
-              className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+              className="text-lg font-semibold text-gray-800 dark:text-gray-100 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
             >
               {car.ten_xe || "Tên xe"}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
               {loaiXeName}
             </p>
           </div>
         </div>
 
         {/* Car Specifications */}
-        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
+        <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-300 mb-4 transition-colors duration-300">
           <div className="flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-1 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -131,7 +173,7 @@ const CarCard = ({ car, navigateTo = "category" }) => {
             <span>{car.dung_tich_nhien_lieu || 70}L</span>
           </div>
           <div className="flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-1 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -148,7 +190,7 @@ const CarCard = ({ car, navigateTo = "category" }) => {
             <span>{car.hop_so === 'automatic' ? 'Automatic' : car.hop_so === 'manual' ? 'Manual' : car.hop_so || 'Manual'}</span>
           </div>
           <div className="flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 mr-1 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -165,23 +207,23 @@ const CarCard = ({ car, navigateTo = "category" }) => {
           <div>
             {price > 0 ? (
               <>
-                <div className="text-2xl font-bold text-gray-800">
+                <div className="text-2xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                   ${(price / 23000).toFixed(2)}/day
                 </div>
                 {originalPrice && originalPrice > 0 && originalPrice !== price && (
-                  <div className="text-sm text-gray-400 line-through">
+                  <div className="text-sm text-gray-400 dark:text-gray-500 line-through transition-colors duration-300">
                     ${(originalPrice / 23000).toFixed(2)}
                   </div>
                 )}
                 {/* Debug: Hiển thị giá VNĐ nếu giá USD quá nhỏ */}
                 {(price / 23000) < 0.01 && (
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
                     {price.toLocaleString('vi-VN')} VNĐ/ngày
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-lg text-gray-500">Chưa có giá</div>
+              <div className="text-lg text-gray-500 dark:text-gray-400 transition-colors duration-300">Chưa có giá</div>
             )}
           </div>
           <button
@@ -199,7 +241,7 @@ const CarCard = ({ car, navigateTo = "category" }) => {
                 navigate("/category");
               }
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
           >
             {navigateTo === "detail" ? "Rent Now" : "View All"}
           </button>

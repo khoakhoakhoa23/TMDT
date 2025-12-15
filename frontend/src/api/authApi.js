@@ -13,6 +13,11 @@ const authApi = {
     return axiosClient.get("me/");
   },
 
+  getMe() {
+    // API mới trả về đầy đủ user + avatar
+    return axiosClient.get("users/me/");
+  },
+
   refreshToken(refreshToken) {
     return axiosClient.post("refresh/", {
       refresh: refreshToken,

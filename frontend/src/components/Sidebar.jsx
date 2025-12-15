@@ -30,19 +30,19 @@ const Sidebar = () => {
     });
 
   return (
-    <aside className="w-64 bg-gray-800 text-white min-h-screen">
+    <aside className="w-64 bg-gray-800 dark:bg-gray-900 text-white min-h-screen border-r border-gray-700 dark:border-gray-800 transition-colors duration-300">
       <div className="p-4">
-        <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
+        <h2 className="text-xl font-bold mb-6 text-white dark:text-gray-100 transition-colors duration-300">Admin Panel</h2>
         <nav>
           <ul className="space-y-2">
             {menuItems.map((item) => (
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-300 ${
                     location.pathname === item.path
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-gray-700"
+                      ? "bg-blue-600 dark:bg-blue-500 text-white"
+                      : "text-gray-300 dark:text-gray-400 hover:bg-gray-700 dark:hover:bg-gray-800"
                   }`}
                 >
                   <span>{item.icon}</span>

@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUser = async () => {
       const token = localStorage.getItem("access_token");
       if (!token) {
         setLoading(false);
@@ -16,13 +16,29 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const response = await authApi.getUserRole();
-        setUser({
-          username: response.data.username,
-          role: response.data.role || "user",
-        });
+        // Thử dùng API mới /users/me/ để lấy đầy đủ thông tin
+        try {
+          const response = await authApi.getMe();
+          setUser({
+            id: response.data.id,
+            username: response.data.username,
+            email: response.data.email,
+            first_name: response.data.first_name,
+            last_name: response.data.last_name,
+            role: response.data.role || "user",
+            avatar_url: response.data.avatar_url,
+            profile: response.data.profile,
+          });
+        } catch (meError) {
+          // Fallback về API cũ nếu API mới chưa có
+          const response = await authApi.getUserRole();
+          setUser({
+            username: response.data.username,
+            role: response.data.role || "user",
+          });
+        }
       } catch (error) {
-        console.error("Error fetching user role:", error);
+        console.error("Error fetching user:", error);
         // Nếu lỗi, clear user
         setUser(null);
         localStorage.removeItem("access_token");
@@ -32,11 +48,36 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    fetchUserRole();
+    fetchUser();
   }, []);
 
   const updateUser = (userData) => {
-    setUser(userData);
+    setUser((prev) => ({
+      ...prev,
+      ...userData,
+    }));
+  };
+
+  const refreshUser = async () => {
+    // Refresh user data từ API
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    try {
+      const response = await authApi.getMe();
+      setUser({
+        id: response.data.id,
+        username: response.data.username,
+        email: response.data.email,
+        first_name: response.data.first_name,
+        last_name: response.data.last_name,
+        role: response.data.role || "user",
+        avatar_url: response.data.avatar_url,
+        profile: response.data.profile,
+      });
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+    }
   };
 
   const logout = () => {
@@ -54,6 +95,7 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         updateUser,
+        refreshUser,
         logout,
         isAdmin,
         isUser,

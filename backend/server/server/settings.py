@@ -180,13 +180,21 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
-    ],
+    # Throttling Configuration
+    # Trong môi trường development: TẮT hoặc TĂNG RẤT CAO
+    # Trong production: BẬT với rate hợp lý
+    "DEFAULT_THROTTLE_CLASSES": (
+        # TẮT throttling trong development
+        [] if DEBUG else [
+            "rest_framework.throttling.AnonRateThrottle",
+            "rest_framework.throttling.UserRateThrottle",
+        ]
+    ),
     "DEFAULT_THROTTLE_RATES": {
-        "anon": os.getenv("DRF_THROTTLE_ANON", "60/hour"),
-        "user": os.getenv("DRF_THROTTLE_USER", "120/hour"),
+        # Development: Rate rất cao để không bao giờ bị khóa
+        # Production: Rate hợp lý để bảo vệ server
+        "anon": os.getenv("DRF_THROTTLE_ANON", "10000/hour" if DEBUG else "100/hour"),
+        "user": os.getenv("DRF_THROTTLE_USER", "20000/hour" if DEBUG else "1000/hour"),
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

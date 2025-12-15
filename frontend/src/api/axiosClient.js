@@ -17,13 +17,26 @@ const PUBLIC_PATHS = [
 ];
 
 // Tự động gắn token vào request
-axiosClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Debug: Log token để kiểm tra
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Axios] Request to:", config.url);
+      console.log("[Axios] Has token:", !!token);
+      if (token) {
+        console.log("[Axios] Token (first 20 chars):", token.substring(0, 20) + "...");
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Xử lý token refresh khi nhận 401
 axiosClient.interceptors.response.use(
@@ -33,6 +46,27 @@ axiosClient.interceptors.response.use(
     const isPublic = PUBLIC_PATHS.some((p) =>
       (originalRequest?.url || "").startsWith(p)
     );
+
+    // Xử lý lỗi 429 (Throttled)
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.headers?.["retry-after"] || error.response?.data?.detail?.match(/\d+/)?.[0] || 60;
+      console.warn(`Request throttled. Retry after ${retryAfter} seconds.`);
+      
+      // Hiển thị thông báo cho user (nếu có thể)
+      if (typeof window !== "undefined" && window.alert) {
+        // Chỉ hiển thị một lần để tránh spam
+        if (!window._throttleWarningShown) {
+          window._throttleWarningShown = true;
+          setTimeout(() => {
+            window._throttleWarningShown = false;
+          }, 5000);
+          console.warn("API request bị giới hạn. Vui lòng đợi một chút và thử lại.");
+        }
+      }
+      
+      // Không retry tự động, để component tự xử lý
+      return Promise.reject(error);
+    }
 
     // Nếu lỗi 401 và chưa retry
     if (error.response?.status === 401 && !originalRequest._retry) {
