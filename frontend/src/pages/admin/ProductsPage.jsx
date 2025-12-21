@@ -343,7 +343,7 @@ const ProductsPage = () => {
       } else {
         delete submitData.gia_khuyen_mai;
       }
-
+      
       // Xóa các field rỗng hoặc null, nhưng giữ lại các field bắt buộc
       const requiredFields = ['ma_xe', 'ten_xe', 'slug', 'gia', 'gia_thue', 'so_luong', 'mau_sac', 'loai_xe', 'trang_thai', 'dung_tich_nhien_lieu', 'hop_so', 'so_cho', 'loai_nhien_lieu'];
       Object.keys(submitData).forEach((key) => {
@@ -422,8 +422,8 @@ const ProductsPage = () => {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Đang tải xe...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-500 mb-4 transition-colors duration-300"></div>
+          <p className="text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải xe...</p>
         </div>
       </div>
     );
@@ -432,12 +432,12 @@ const ProductsPage = () => {
   if (error && cars.length === 0) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 transition-colors duration-300">
           <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 transition-colors duration-300" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
-            <p className="text-red-600 font-semibold">Lỗi: {error}</p>
+            <p className="text-red-600 dark:text-red-400 font-semibold transition-colors duration-300">Lỗi: {error}</p>
           </div>
         </div>
       </div>
@@ -447,9 +447,9 @@ const ProductsPage = () => {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sản phẩm (Xe)</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Sản phẩm (Xe)</h1>
         <div className="flex items-center space-x-4">
-          <span className="text-gray-600">{cars.length} xe</span>
+          <span className="text-gray-600 dark:text-gray-400 transition-colors duration-300">{cars.length} xe</span>
           <button
             onClick={async () => {
               // Đóng modal thêm xe nếu đang mở
@@ -464,7 +464,7 @@ const ProductsPage = () => {
               // Đảm bảo load lại danh sách khi mở modal
               await fetchCarTypes();
             }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+            className="bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors duration-300 flex items-center space-x-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -473,7 +473,7 @@ const ProductsPage = () => {
           </button>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 flex items-center space-x-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -484,56 +484,56 @@ const ProductsPage = () => {
       </div>
 
       {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800 text-sm">{error}</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 transition-colors duration-300">
+          <p className="text-yellow-800 dark:text-yellow-400 text-sm transition-colors duration-300">{error}</p>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow border overflow-x-auto max-w-full">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-x-auto max-w-full transition-colors duration-300">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-900/50 transition-colors duration-300">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Tên xe</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Loại</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Giá thuê (VND)</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Số lượng</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Trạng thái</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Thao tác</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Tên xe</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Loại</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Giá thuê (VND)</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Số lượng</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Trạng thái</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {cars.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 transition-colors duration-300">
                   Chưa có xe
                 </td>
               </tr>
             ) : (
               cars.map((car) => (
-                <tr key={car.ma_xe || car.id} className="border-t hover:bg-gray-50">
+                <tr key={car.ma_xe || car.id} className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-300">
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-800">{car.ten_xe || "N/A"}</div>
+                    <div className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">{car.ten_xe || "N/A"}</div>
                     {car.ma_xe && (
-                      <div className="text-xs text-gray-500">ID: {car.ma_xe}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">ID: {car.ma_xe}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                     {car.loai_xe?.ten_loai || car.loai_xe_detail?.ten_loai || "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-gray-800 font-semibold">
+                  <td className="px-4 py-3 text-gray-800 dark:text-gray-100 font-semibold transition-colors duration-300">
                     {car.gia_thue || car.gia_khuyen_mai || car.gia
                       ? `${(car.gia_thue || car.gia_khuyen_mai || car.gia).toLocaleString("vi-VN")} VNĐ`
                       : "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 transition-colors duration-300">
                     {car.so_luong || 0}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      className={`px-2 py-1 rounded-full text-xs font-semibold transition-colors duration-300 ${
                         car.trang_thai === "in_stock" || car.so_luong > 0
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-200 text-gray-700"
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {car.trang_thai === "in_stock" || car.so_luong > 0 ? "Còn xe" : "Hết xe"}
@@ -543,7 +543,7 @@ const ProductsPage = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleOpenModal(car)}
-                        className="text-blue-600 hover:text-blue-800 p-1"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1 transition-colors duration-300"
                         title="Sửa"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -552,7 +552,7 @@ const ProductsPage = () => {
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(car)}
-                        className="text-red-600 hover:text-red-800 p-1"
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1 transition-colors duration-300"
                         title="Xóa"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -571,7 +571,7 @@ const ProductsPage = () => {
       {/* Modal thêm/sửa xe */}
       {showModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-colors duration-300"
           onClick={(e) => {
             // Đóng modal khi click vào overlay
             if (e.target === e.currentTarget) {
@@ -580,17 +580,17 @@ const ProductsPage = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-50"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-none max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
                   {editingCar ? "Sửa xe" : "Thêm xe mới"}
                 </h2>
                 <button
                   onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-300"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -599,15 +599,15 @@ const ProductsPage = () => {
               </div>
 
               {formErrors.general && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                  <p className="text-red-600 text-sm">{formErrors.general}</p>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 transition-colors duration-300">
+                  <p className="text-red-600 dark:text-red-400 text-sm transition-colors duration-300">{formErrors.general}</p>
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Mã xe <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -615,19 +615,19 @@ const ProductsPage = () => {
                       name="ma_xe"
                       value={formData.ma_xe}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.ma_xe ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                        formErrors.ma_xe ? "border-red-500 dark:border-red-400" : ""
+                      } transition-colors duration-300`}
                       required
                       disabled={!!editingCar}
                     />
                     {formErrors.ma_xe && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.ma_xe}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.ma_xe}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Tên xe <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -635,19 +635,19 @@ const ProductsPage = () => {
                       name="ten_xe"
                       value={formData.ten_xe}
                       onChange={handleTenXeChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.ten_xe ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 ${
+                        formErrors.ten_xe ? "border-red-500 dark:border-red-400" : ""
+                      } transition-colors duration-300`}
                       required
                     />
                     {formErrors.ten_xe && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.ten_xe}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.ten_xe}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                     Slug
                   </label>
                   <input
@@ -655,13 +655,13 @@ const ProductsPage = () => {
                     name="slug"
                     value={formData.slug}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Giá (VNĐ) <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -669,19 +669,19 @@ const ProductsPage = () => {
                       name="gia"
                       value={formData.gia}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.gia ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        formErrors.gia ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                      } transition-colors duration-300`}
                       required
                       min="0"
                     />
                     {formErrors.gia && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.gia}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.gia}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Giá khuyến mãi (VNĐ)
                     </label>
                     <input
@@ -689,13 +689,13 @@ const ProductsPage = () => {
                       name="gia_khuyen_mai"
                       value={formData.gia_khuyen_mai}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                       min="0"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Giá thuê/ngày (VNĐ) <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -703,21 +703,21 @@ const ProductsPage = () => {
                       name="gia_thue"
                       value={formData.gia_thue}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.gia_thue ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        formErrors.gia_thue ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                      } transition-colors duration-300`}
                       required
                       min="0"
                     />
                     {formErrors.gia_thue && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.gia_thue}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.gia_thue}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Số lượng <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -725,19 +725,19 @@ const ProductsPage = () => {
                       name="so_luong"
                       value={formData.so_luong}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.so_luong ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        formErrors.so_luong ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                      } transition-colors duration-300`}
                       required
                       min="0"
                     />
                     {formErrors.so_luong && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.so_luong}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.so_luong}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Màu sắc <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -745,27 +745,27 @@ const ProductsPage = () => {
                       name="mau_sac"
                       value={formData.mau_sac}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.mau_sac ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        formErrors.mau_sac ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                      } transition-colors duration-300`}
                       required
                     />
                     {formErrors.mau_sac && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.mau_sac}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.mau_sac}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Loại xe <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="loai_xe"
                       value={formData.loai_xe}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formErrors.loai_xe ? "border-red-500" : "border-gray-300"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                        formErrors.loai_xe ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                      } transition-colors duration-300`}
                       required
                     >
                       <option value="">Chọn loại xe</option>
@@ -776,14 +776,14 @@ const ProductsPage = () => {
                       ))}
                     </select>
                     {formErrors.loai_xe && (
-                      <p className="text-red-500 text-xs mt-1">{formErrors.loai_xe}</p>
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{formErrors.loai_xe}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Số chỗ ngồi
                     </label>
                     <input
@@ -791,20 +791,20 @@ const ProductsPage = () => {
                       name="so_cho"
                       value={formData.so_cho}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                       min="1"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Hộp số
                     </label>
                     <select
                       name="hop_so"
                       value={formData.hop_so}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                     >
                       <option value="manual">Số sàn</option>
                       <option value="automatic">Số tự động</option>
@@ -812,14 +812,14 @@ const ProductsPage = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Loại nhiên liệu
                     </label>
                     <select
                       name="loai_nhien_lieu"
                       value={formData.loai_nhien_lieu}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                     >
                       <option value="gasoline">Xăng</option>
                       <option value="electric">Điện</option>
@@ -829,7 +829,7 @@ const ProductsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                     Dung tích nhiên liệu (L)
                   </label>
                   <input
@@ -837,13 +837,13 @@ const ProductsPage = () => {
                     name="dung_tich_nhien_lieu"
                     value={formData.dung_tich_nhien_lieu}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                     min="0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                     Mô tả ngắn
                   </label>
                   <textarea
@@ -851,12 +851,12 @@ const ProductsPage = () => {
                     value={formData.mo_ta_ngan}
                     onChange={handleInputChange}
                     rows="2"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                     Mô tả chi tiết
                   </label>
                   <textarea
@@ -864,13 +864,13 @@ const ProductsPage = () => {
                     value={formData.mo_ta}
                     onChange={handleInputChange}
                     rows="4"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       URL ảnh
                     </label>
                     <input
@@ -878,13 +878,13 @@ const ProductsPage = () => {
                       name="image_url"
                       value={formData.image_url}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                       placeholder="https://..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Upload ảnh
                     </label>
                     <input
@@ -892,50 +892,50 @@ const ProductsPage = () => {
                       name="image_file"
                       accept="image/*"
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                     />
                   </div>
                 </div>
 
                 {imagePreview && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                       Xem trước
                     </label>
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-300 dark:border-gray-600 transition-colors duration-300"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                     Trạng thái
                   </label>
                   <select
                     name="trang_thai"
                     value={formData.trang_thai}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors duration-300"
                   >
                     <option value="in_stock">Còn hàng</option>
                     <option value="out_of_stock">Hết hàng</option>
                   </select>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t">
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300"
                   >
                     {editingCar ? "Cập nhật" : "Tạo mới"}
                   </button>
@@ -949,7 +949,7 @@ const ProductsPage = () => {
       {/* Modal xác nhận xóa */}
       {deleteConfirm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-colors duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setDeleteConfirm(null);
@@ -957,25 +957,25 @@ const ProductsPage = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 relative z-50"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-none max-w-md w-full mx-4 relative z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className="text-lg font-bold mb-4">Xác nhận xóa</h3>
-              <p className="text-gray-700 mb-6">
+              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100 transition-colors duration-300">Xác nhận xóa</h3>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 transition-colors duration-300">
                 Bạn có chắc chắn muốn xóa xe <strong>{deleteConfirm.ten_xe}</strong>? 
                 Hành động này không thể hoàn tác.
               </p>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={() => handleDelete(deleteConfirm)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors duration-300"
                 >
                   Xóa
                 </button>
@@ -988,7 +988,7 @@ const ProductsPage = () => {
       {/* Modal quản lý loại xe */}
       {showCarTypeModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-colors duration-300"
           onClick={(e) => {
             // Đóng modal khi click vào overlay
             if (e.target === e.currentTarget) {
@@ -1000,12 +1000,12 @@ const ProductsPage = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-50"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-none max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Quản lý Loại xe</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Quản lý Loại xe</h2>
                 <button
                   onClick={() => {
                     setShowCarTypeModal(false);
@@ -1013,7 +1013,7 @@ const ProductsPage = () => {
                     setCarTypeFormData({ ma_loai: "", ten_loai: "" });
                     setCarTypeFormErrors({});
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-300"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1022,14 +1022,14 @@ const ProductsPage = () => {
               </div>
 
               {/* Form thêm/sửa loại xe */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-semibold mb-4">
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 transition-colors duration-300">
                   {editingCarType ? "Sửa loại xe" : "Thêm loại xe mới"}
                 </h3>
                 
                 {carTypeFormErrors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                    <p className="text-red-600 text-sm">{carTypeFormErrors.general}</p>
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-4 transition-colors duration-300">
+                    <p className="text-red-600 dark:text-red-400 text-sm transition-colors duration-300">{carTypeFormErrors.general}</p>
                   </div>
                 )}
                 
@@ -1084,7 +1084,7 @@ const ProductsPage = () => {
                 >
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                         Mã loại <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1103,11 +1103,11 @@ const ProductsPage = () => {
                         required
                       />
                       {carTypeFormErrors.ma_loai && (
-                        <p className="text-red-500 text-xs mt-1">{carTypeFormErrors.ma_loai}</p>
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{carTypeFormErrors.ma_loai}</p>
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
                         Tên loại <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1125,7 +1125,7 @@ const ProductsPage = () => {
                         required
                       />
                       {carTypeFormErrors.ten_loai && (
-                        <p className="text-red-500 text-xs mt-1">{carTypeFormErrors.ten_loai}</p>
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-1 transition-colors duration-300">{carTypeFormErrors.ten_loai}</p>
                       )}
                     </div>
                   </div>
@@ -1138,14 +1138,14 @@ const ProductsPage = () => {
                           setCarTypeFormData({ ma_loai: "", ten_loai: "" });
                           setCarTypeFormErrors({});
                         }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300"
                       >
                         Hủy
                       </button>
                     )}
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors duration-300"
                     >
                       {editingCarType ? "Cập nhật" : "Thêm mới"}
                     </button>
@@ -1154,37 +1154,37 @@ const ProductsPage = () => {
               </div>
 
               {/* Danh sách loại xe */}
-              <div className="bg-white rounded-lg border">
-                <h3 className="text-lg font-semibold mb-4 p-4 border-b">Danh sách loại xe</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                <h3 className="text-lg font-semibold mb-4 p-4 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 transition-colors duration-300">Danh sách loại xe</h3>
                 <div className="overflow-x-auto">
                   {carTypesLoading ? (
                     <div className="p-8 text-center">
-                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mb-2"></div>
-                      <p className="text-gray-600 text-sm">Đang tải...</p>
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 dark:border-green-500 mb-2 transition-colors duration-300"></div>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm transition-colors duration-300">Đang tải...</p>
                     </div>
                   ) : (
                     <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 dark:bg-gray-900/50 transition-colors duration-300">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Mã loại</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Tên loại</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700">Thao tác</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Mã loại</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Tên loại</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 transition-colors duration-300">Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
                         {carTypes.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+                            <td colSpan={3} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400 transition-colors duration-300">
                               Chưa có loại xe
                             </td>
                           </tr>
                         ) : (
                           carTypes.map((carType) => (
-                          <tr key={carType.ma_loai} className="border-t hover:bg-gray-50">
-                            <td className="px-4 py-3 font-semibold text-gray-800">
+                          <tr key={carType.ma_loai} className="border-t border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-300">
+                            <td className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                               {carType.ma_loai}
                             </td>
-                            <td className="px-4 py-3 text-gray-700">{carType.ten_loai}</td>
+                            <td className="px-4 py-3 text-gray-700 dark:text-gray-300 transition-colors duration-300">{carType.ten_loai}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center space-x-2">
                                 <button
@@ -1196,7 +1196,7 @@ const ProductsPage = () => {
                                     });
                                     setCarTypeFormErrors({});
                                   }}
-                                  className="text-blue-600 hover:text-blue-800 p-1"
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1 transition-colors duration-300"
                                   title="Sửa"
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1205,7 +1205,7 @@ const ProductsPage = () => {
                                 </button>
                                 <button
                                   onClick={() => setDeleteCarTypeConfirm(carType)}
-                                  className="text-red-600 hover:text-red-800 p-1"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1 transition-colors duration-300"
                                   title="Xóa"
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1230,7 +1230,7 @@ const ProductsPage = () => {
       {/* Modal xác nhận xóa loại xe */}
       {deleteCarTypeConfirm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-colors duration-300"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setDeleteCarTypeConfirm(null);
@@ -1238,19 +1238,19 @@ const ProductsPage = () => {
           }}
         >
           <div 
-            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 relative z-50"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-none max-w-md w-full mx-4 relative z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className="text-lg font-bold mb-4">Xác nhận xóa</h3>
-              <p className="text-gray-700 mb-6">
+              <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100 transition-colors duration-300">Xác nhận xóa</h3>
+              <p className="text-gray-700 dark:text-gray-300 mb-6 transition-colors duration-300">
                 Bạn có chắc chắn muốn xóa loại xe <strong>{deleteCarTypeConfirm.ten_loai}</strong>? 
                 Hành động này không thể hoàn tác và có thể ảnh hưởng đến các xe đang sử dụng loại này.
               </p>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteCarTypeConfirm(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300"
                 >
                   Hủy
                 </button>
@@ -1269,7 +1269,7 @@ const ProductsPage = () => {
                       alert(errorMsg);
                     }
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors duration-300"
                 >
                   Xóa
                 </button>

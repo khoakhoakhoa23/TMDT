@@ -200,7 +200,7 @@ const Detail = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-lg text-gray-600">Đang tải...</div>
+        <div className="text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải...</div>
       </div>
     );
   }
@@ -208,7 +208,7 @@ const Detail = () => {
   if (!car) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Không tìm thấy xe</p>
+        <p className="text-gray-500 dark:text-gray-400 transition-colors duration-300">Không tìm thấy xe</p>
       </div>
     );
   }
@@ -221,14 +221,14 @@ const Detail = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Featured Car Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-8 mb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-700 dark:to-blue-900 rounded-lg p-8 mb-8 relative overflow-hidden transition-colors duration-300">
         <div className="absolute inset-0 bg-black opacity-10"></div>
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
           <div className="text-white">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Sports car with the best design and acceleration
             </h1>
-            <p className="text-lg text-blue-100">
+            <p className="text-lg text-blue-100 dark:text-blue-200 transition-colors duration-300">
               Safety and comfort while driving a futuristic and elegant sports car
             </p>
           </div>
@@ -250,7 +250,7 @@ const Detail = () => {
         {/* Left Column - Image Gallery and Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Image Gallery */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <div className="mb-4">
               <img
                 src={getImageUrl(
@@ -259,7 +259,7 @@ const Detail = () => {
                     : mainImage
                 )}
                 alt={car.ten_xe}
-                className="w-full h-64 sm:h-80 md:h-96 object-contain bg-gray-50 rounded-lg p-4"
+                className="w-full h-64 sm:h-80 md:h-96 object-contain bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 transition-colors duration-300"
                 onError={(e) => {
                   e.target.src = "/images/img_car.png";
                 }}
@@ -274,14 +274,14 @@ const Detail = () => {
                     onClick={() => setSelectedImageIndex(index)}
                     className={`border-2 rounded-lg overflow-hidden transition-all ${
                       selectedImageIndex === index
-                        ? "border-blue-600 ring-2 ring-blue-200"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-blue-600 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                   >
                     <img
                       src={getImageUrl(img)}
                       alt={`Thumbnail ${index + 1}`}
-                      className="w-full h-20 sm:h-24 object-contain bg-gray-50 p-2"
+                      className="w-full h-20 sm:h-24 object-contain bg-gray-50 dark:bg-gray-900/50 p-2 transition-colors duration-300"
                       onError={(e) => {
                         e.target.src = "/images/img_car.png";
                       }}
@@ -293,15 +293,15 @@ const Detail = () => {
           </div>
 
           {/* Car Details Card */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <div className="mb-4">
-              <h1 className="text-3xl font-bold mb-2">{car.ten_xe}</h1>
+              <h1 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100 transition-colors duration-300">{car.ten_xe}</h1>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="flex">
                   {[...Array(5)].map((_, i) => (
                     <svg
                       key={i}
-                      className={`w-5 h-5 ${i < 4 ? "text-yellow-400" : "text-gray-300"}`}
+                      className={`w-5 h-5 ${i < 4 ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"} transition-colors duration-300`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -309,47 +309,47 @@ const Detail = () => {
                     </svg>
                   ))}
                 </div>
-                <span className="text-gray-600">440+ Reviewer</span>
+                <span className="text-gray-600 dark:text-gray-400 transition-colors duration-300">440+ Reviewer</span>
               </div>
             </div>
 
             {car.mo_ta && (
-              <p className="text-gray-600 mb-6">{car.mo_ta}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 transition-colors duration-300">{car.mo_ta}</p>
             )}
 
             {/* Specifications Grid */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <span className="text-gray-600 text-sm">Type Car</span>
-                <p className="font-semibold text-gray-800">
+                <span className="text-gray-600 dark:text-gray-400 text-sm transition-colors duration-300">Type Car</span>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                   {car.loai_xe?.ten_loai || car.loai_xe_detail?.ten_loai || "N/A"}
                 </p>
               </div>
               <div>
-                <span className="text-gray-600 text-sm">Capacity</span>
-                <p className="font-semibold text-gray-800">{car.so_cho || 2} Person</p>
+                <span className="text-gray-600 dark:text-gray-400 text-sm transition-colors duration-300">Capacity</span>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">{car.so_cho || 2} Person</p>
               </div>
               <div>
-                <span className="text-gray-600 text-sm">Steering</span>
-                <p className="font-semibold text-gray-800">
+                <span className="text-gray-600 dark:text-gray-400 text-sm transition-colors duration-300">Steering</span>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                   {car.hop_so === "automatic" ? "Automatic" : car.hop_so === "manual" ? "Manual" : car.hop_so || "Manual"}
                 </p>
               </div>
               <div>
-                <span className="text-gray-600 text-sm">Gasoline</span>
-                <p className="font-semibold text-gray-800">{car.dung_tich_nhien_lieu || 70}L</p>
+                <span className="text-gray-600 dark:text-gray-400 text-sm transition-colors duration-300">Gasoline</span>
+                <p className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">{car.dung_tich_nhien_lieu || 70}L</p>
               </div>
             </div>
 
             {/* Price and Rent Button */}
-            <div className="flex items-center justify-between pt-6 border-t">
+            <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
               <div>
                 <div className="flex items-center space-x-3">
-                  <span className="text-3xl font-bold text-gray-800">
+                  <span className="text-3xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                     ${priceUSD}/days
                   </span>
                   {originalPriceUSD && (
-                    <span className="text-lg text-gray-400 line-through">
+                    <span className="text-lg text-gray-400 dark:text-gray-500 line-through transition-colors duration-300">
                       ${originalPriceUSD}
                     </span>
                   )}
@@ -357,7 +357,7 @@ const Detail = () => {
               </div>
               <button
                 onClick={handleRentNow}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                className="px-8 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
               >
                 Rent Now
               </button>
@@ -365,10 +365,10 @@ const Detail = () => {
           </div>
 
           {/* Reviews Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Reviews</h2>
-              <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm font-semibold">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Reviews</h2>
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-semibold transition-colors duration-300">
                 {reviews.length}
               </span>
             </div>
@@ -379,14 +379,14 @@ const Detail = () => {
                 {!showReviewForm ? (
                   <button
                     onClick={() => setShowReviewForm(true)}
-                    className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                    className="w-full py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
                   >
                     Viết đánh giá
                   </button>
                 ) : (
-                  <form onSubmit={handleSubmitReview} className="bg-gray-50 p-4 rounded-lg space-y-4">
+                  <form onSubmit={handleSubmitReview} className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg space-y-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
                         Đánh giá của bạn
                       </label>
                       <div className="flex items-center space-x-2">
@@ -398,10 +398,10 @@ const Detail = () => {
                             className="focus:outline-none"
                           >
                             <svg
-                              className={`w-8 h-8 ${
+                              className={`w-8 h-8 transition-colors duration-300 ${
                                 star <= reviewForm.rating
                                   ? "text-yellow-400"
-                                  : "text-gray-300"
+                                  : "text-gray-300 dark:text-gray-600"
                               }`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
@@ -413,7 +413,7 @@ const Detail = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
                         Nhận xét
                       </label>
                       <textarea
@@ -423,7 +423,7 @@ const Detail = () => {
                         }
                         placeholder="Chia sẻ trải nghiệm của bạn..."
                         rows={4}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
                         required
                       />
                     </div>
@@ -431,7 +431,7 @@ const Detail = () => {
                       <button
                         type="submit"
                         disabled={submittingReview}
-                        className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50"
+                        className="flex-1 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold disabled:opacity-50"
                       >
                         {submittingReview ? "Đang gửi..." : "Gửi đánh giá"}
                       </button>
@@ -441,7 +441,7 @@ const Detail = () => {
                           setShowReviewForm(false);
                           setReviewForm({ rating: 5, comment: "" });
                         }}
-                        className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                        className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 font-semibold"
                       >
                         Hủy
                       </button>
@@ -454,10 +454,10 @@ const Detail = () => {
             {reviews.length > 0 ? (
               <div className="space-y-6">
                 {reviews.map((review) => (
-                  <div key={review.id} className="border-b pb-6 last:border-b-0 last:pb-0">
+                  <div key={review.id} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0 last:pb-0 transition-colors duration-300">
                     <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-blue-600 font-semibold text-lg">
+                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg transition-colors duration-300">
                           {review.user_name?.charAt(0)?.toUpperCase() ||
                             review.user?.username?.charAt(0)?.toUpperCase() ||
                             "U"}
@@ -466,14 +466,14 @@ const Detail = () => {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <h4 className="font-semibold text-gray-800">
+                            <h4 className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">
                               {review.user_name || review.user?.username || "Người dùng"}
                             </h4>
                             {review.user_title && (
-                              <p className="text-sm text-gray-500">{review.user_title}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">{review.user_title}</p>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                             {review.created_at
                               ? new Date(review.created_at).toLocaleDateString("en-US", {
                                   day: "numeric",
@@ -487,7 +487,7 @@ const Detail = () => {
                           {[...Array(5)].map((_, i) => (
                             <svg
                               key={i}
-                              className={`w-4 h-4 ${i < review.rating ? "text-yellow-400" : "text-gray-300"}`}
+                              className={`w-4 h-4 transition-colors duration-300 ${i < review.rating ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -495,17 +495,17 @@ const Detail = () => {
                             </svg>
                           ))}
                         </div>
-                        <p className="text-gray-600 text-sm leading-relaxed">{review.comment}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed transition-colors duration-300">{review.comment}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">Chưa có đánh giá nào</p>
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8 transition-colors duration-300">Chưa có đánh giá nào</p>
             )}
             {reviews.length > 2 && (
-              <button className="mt-6 text-blue-600 hover:text-blue-700 font-semibold flex items-center">
+              <button className="mt-6 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold flex items-center transition-colors duration-300">
                 Show All
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -520,8 +520,8 @@ const Detail = () => {
           {/* Recent Car */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Recent Car</h3>
-              <Link to="/category" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recent Car</h3>
+              <Link to="/category" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
                 View All
               </Link>
             </div>
@@ -531,7 +531,7 @@ const Detail = () => {
                   <CarCard key={car.ma_xe || car.id} car={car} />
                 ))
               ) : (
-                <p className="text-gray-500 text-center py-4">Không có xe gần đây</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4 transition-colors duration-300">Không có xe gần đây</p>
               )}
             </div>
           </div>
@@ -539,8 +539,8 @@ const Detail = () => {
           {/* Recommendation Car */}
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Recomendation Car</h3>
-              <Link to="/category" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recomendation Car</h3>
+              <Link to="/category" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
                 View All
               </Link>
             </div>
@@ -550,7 +550,7 @@ const Detail = () => {
                   <CarCard key={car.ma_xe || car.id} car={car} />
                 ))
               ) : (
-                <p className="text-gray-500 text-center py-4">Không có xe đề xuất</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4 transition-colors duration-300">Không có xe đề xuất</p>
               )}
             </div>
           </div>

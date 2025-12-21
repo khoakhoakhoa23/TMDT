@@ -21,3 +21,12 @@ DRF_THROTTLE_USER=120/hour
 DJANGO_SECURE_SSL_REDIRECT=False
 DJANGO_SESSION_COOKIE_SECURE=False
 DJANGO_CSRF_COOKIE_SECURE=False
+
+# Google OAuth Settings
+# Client ID để verify Google OAuth tokens
+GOOGLE_CLIENT_ID=188966214696-rj8bomspmvc8ocmrb4ss7s6n8dnu7p3m.apps.googleusercontent.com
+
+# Payment Development Mode
+# Bật chế độ development để test payment mà không tốn phí
+# Chỉ hoạt động khi DJANGO_DEBUG=True
+PAYMENT_DEV_MODE=True

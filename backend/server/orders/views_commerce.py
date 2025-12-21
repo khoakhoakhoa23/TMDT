@@ -1,10 +1,11 @@
 ﻿from django.db import transaction
+from django.utils import timezone
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from cart.commerce_models import Cart, CartItem, Order, OrderItem
+from orders.models import Cart, CartItem, Order, OrderItem
 from products.models import Xe
 from orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
 
@@ -25,7 +26,8 @@ class CartViewSet(viewsets.ModelViewSet):
                 "items__xe"
             )
         return Cart.objects.none()
-def perform_create(self, serializer):
+    
+    def perform_create(self, serializer):
         if self.request.user.is_authenticated:
             serializer.save(user=self.request.user, session_key="")
         else:
@@ -38,15 +40,15 @@ def perform_create(self, serializer):
 class CartItemViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
 
-def get_queryset(self):
-    session_key = _get_session_key(self.request)
-    if self.request.user.is_authenticated:
-        return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
-    if session_key:
-        return CartItem.objects.filter(
-            cart__session_key=session_key, cart__user__isnull=True
-        ).select_related("xe", "cart")
-    return CartItem.objects.none()
+    def get_queryset(self):
+        session_key = _get_session_key(self.request)
+        if self.request.user.is_authenticated:
+            return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
+        if session_key:
+            return CartItem.objects.filter(
+                cart__session_key=session_key, cart__user__isnull=True
+            ).select_related("xe", "cart")
+        return CartItem.objects.none()
 
     def perform_create(self, serializer):
         cart = serializer.validated_data.get("cart")
@@ -64,11 +66,88 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        """Chỉ admin mới có thể update/delete đơn hàng"""
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), IsAdminUser()]
+        return [IsAuthenticated()]
+
     def get_queryset(self):
         qs = Order.objects.filter(user=self.request.user).prefetch_related("items__xe")
         if self.request.user.is_staff or self.request.user.is_superuser:
-            return Order.objects.all().prefetch_related("items__xe")
+            return Order.objects.all().prefetch_related("items__xe").order_by('-created_at')
         return qs
+    
+    def update(self, request, *args, **kwargs):
+        """Override update để tự động cập nhật payment status khi order status = 'paid'"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Lấy status mới từ request data
+        new_status = request.data.get('status', instance.status)
+        
+        # Lưu status cũ để tạo notification
+        old_status = instance.status
+        
+        # Nếu status được set thành "paid", tự động cập nhật payment_status và payment
+        if new_status == "paid" and instance.status != "paid":
+            with transaction.atomic():
+                # Cập nhật order
+                self.perform_update(serializer)
+                
+                # Refresh instance từ database để có dữ liệu mới nhất
+                instance.refresh_from_db()
+                
+                # Cập nhật order.payment_status
+                instance.payment_status = "paid"
+                instance.save()
+                
+                # Cập nhật payment status nếu có
+                try:
+                    from payments.models import Payment
+                    payment = Payment.objects.filter(order=instance).first()
+                    if payment and payment.status != "completed":
+                        payment.status = "completed"
+                        payment.paid_at = timezone.now()
+                        payment.save()
+                        
+                        # Tạo notification thanh toán thành công
+                        try:
+                            from core.notifications import create_payment_success_notification
+                            create_payment_success_notification(instance, payment)
+                        except Exception as e:
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Không thể tạo payment notification: {str(e)}")
+                except Exception as e:
+                    # Log lỗi nhưng không fail update order
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Không thể cập nhật payment status: {str(e)}")
+        else:
+            self.perform_update(serializer)
+        
+        # Tạo notification khi order status thay đổi
+        if old_status != new_status:
+            try:
+                from core.notifications import create_order_status_notification
+                create_order_status_notification(instance, old_status, new_status)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Không thể tạo order status notification: {str(e)}")
+        
+        # Refresh instance và serializer để trả về dữ liệu mới nhất
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update để tự động cập nhật payment status"""
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):

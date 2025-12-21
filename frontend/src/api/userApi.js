@@ -21,6 +21,31 @@ const userApi = {
     // Lấy danh sách khách hàng (nếu cần)
     return axiosClient.get("khachhang/");
   },
+  
+  // Profile APIs
+  getProfile() {
+    // Lấy thông tin profile của user hiện tại
+    return axiosClient.get("users/update-profile/");
+  },
+  
+  updateProfile(data) {
+    // Cập nhật thông tin profile
+    return axiosClient.put("users/update-profile/", data);
+  },
+  
+  changePassword(data) {
+    // Đổi mật khẩu
+    return axiosClient.post("users/change-password/", data);
+  },
+  
+  uploadAvatar(formData) {
+    // Upload avatar
+    return axiosClient.post("users/upload-avatar/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
 };
 
 export default userApi;

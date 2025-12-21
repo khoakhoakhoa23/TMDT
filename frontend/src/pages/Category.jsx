@@ -138,8 +138,8 @@ const Category = () => {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <div className="text-lg text-gray-600">Đang tải danh sách xe...</div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-500 mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải danh sách xe...</div>
         </div>
       </div>
     );
@@ -159,9 +159,9 @@ const Category = () => {
         {/* Car Grid */}
         <div className="lg:col-span-3">
           {cars.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-500 text-lg mb-4">Chưa có xe nào trong danh sách</p>
-              <p className="text-gray-400 text-sm">Vui lòng thử lại sau</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-12 text-center border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+              <p className="text-gray-500 dark:text-gray-400 text-lg mb-4 transition-colors duration-300">Chưa có xe nào trong danh sách</p>
+              <p className="text-gray-400 dark:text-gray-500 text-sm transition-colors duration-300">Vui lòng thử lại sau</p>
             </div>
           ) : (
             <>
@@ -171,23 +171,23 @@ const Category = () => {
                     <CarCard key={car.ma_xe || car.id} car={car} navigateTo="detail" />
                   ))
                 ) : (
-                  <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-lg shadow-md">
-                    <p className="text-lg mb-2">Không tìm thấy xe nào phù hợp với bộ lọc</p>
-                    <p className="text-sm text-gray-400">Vui lòng thử điều chỉnh bộ lọc</p>
+                  <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                    <p className="text-lg mb-2 transition-colors duration-300">Không tìm thấy xe nào phù hợp với bộ lọc</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500 transition-colors duration-300">Vui lòng thử điều chỉnh bộ lọc</p>
                   </div>
                 )}
               </div>
 
               {filteredCars.length > 0 && (
-                <div className="mt-8 flex items-center justify-between bg-white rounded-lg shadow-md p-4">
+                <div className="mt-8 flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
                   <button
                     onClick={handleShowMore}
                     disabled={visibleCount >= filteredCars.length}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+                    className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-600 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
                   >
                     {visibleCount >= filteredCars.length ? "No more cars" : "Show more car"}
                   </button>
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300 transition-colors duration-300">
                     Showing {Math.min(visibleCount, filteredCars.length)} of {filteredCars.length} Cars
                   </span>
                 </div>
