@@ -6,9 +6,62 @@ import hashlib
 import hmac
 import json
 import requests
+import base64
+import io
 from datetime import datetime
 from decimal import Decimal
 from django.conf import settings
+
+# Import QR code generator (miễn phí, không cần API)
+try:
+    import qrcode
+    QR_AVAILABLE = True
+except ImportError:
+    QR_AVAILABLE = False
+
+
+def generate_qr_code_base64(data, size=256):
+    """
+    Tạo QR code từ data và trả về base64 image (MIỄN PHÍ, không cần API)
+    
+    Args:
+        data: String hoặc dict chứa thông tin thanh toán
+        size: Kích thước QR code (pixels)
+    
+    Returns:
+        str: Base64 encoded image data URL (có thể dùng trực tiếp trong <img src="data:image/png;base64,...">)
+    """
+    if not QR_AVAILABLE:
+        # Fallback: trả về URL placeholder nếu không có qrcode library
+        return f"https://api.qrserver.com/v1/create-qr-code/?size={size}x{size}&data={data}"
+    
+    # Chuyển data thành string nếu là dict
+    if isinstance(data, dict):
+        data = json.dumps(data)
+    
+    # Tạo QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(str(data))
+    qr.make(fit=True)
+    
+    # Tạo image
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Resize nếu cần
+    if size != 256:
+        img = img.resize((size, size))
+    
+    # Convert sang base64
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    img_str = base64.b64encode(buffer.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
 
 
 class PaymentGatewayBase:
@@ -19,6 +72,8 @@ class PaymentGatewayBase:
         self.amount = int(amount)  # VNĐ
         self.return_url = return_url
         self.ipn_url = ipn_url
+        # Kiểm tra mode development (tự động approve payment trong test)
+        self.is_development = getattr(settings, 'DEBUG', False) and getattr(settings, 'PAYMENT_DEV_MODE', False)
     
     def create_payment(self):
         """Tạo payment request - Override trong subclass"""
@@ -85,21 +140,39 @@ class MoMoGateway(PaymentGatewayBase):
         # response = requests.post(self.endpoint, json=data)
         # return response.json()
         
-        # Mô phỏng response (sandbox mode)
+        # Mô phỏng response (sandbox mode - KHÔNG TỐN PHÍ)
         payment_url = f"https://test-payment.momo.vn/payment?orderId={order_id}&amount={self.amount}"
-        qr_code = f"https://api.vietqr.io/v2/generate?accountNo=9704228524960933&accountName=NGUYEN VAN A&acqId=970415&amount={self.amount}&addInfo=Thanh toan don hang {self.order.id}&format=compact"
+        
+        # Tạo QR code từ payment URL (MIỄN PHÍ, không cần gọi API)
+        # QR code chứa payment URL để user có thể quét và thanh toán
+        qr_data = {
+            "type": "momo",
+            "orderId": order_id,
+            "amount": self.amount,
+            "orderInfo": f"Thanh toan don hang {self.order.id}",
+            "payment_url": payment_url
+        }
+        qr_code = generate_qr_code_base64(qr_data, size=300)
         
         return {
             "success": True,
             "transaction_id": order_id,
             "payment_url": payment_url,
-            "qr_code": qr_code,
+            "qr_code": qr_code,  # Base64 image, có thể dùng trực tiếp trong <img src={qr_code}>
             "deep_link": f"momo://app?action=pay&orderId={order_id}",
         }
     
     def verify_payment(self, callback_data):
         """Verify MoMo callback"""
-        # Verify signature từ callback
+        # Trong development mode, tự động approve
+        if self.is_development:
+            return {
+                "success": True,
+                "transaction_id": callback_data.get("orderId") or f"DEV_{self.order.id}",
+                "amount": callback_data.get("amount") or self.amount,
+            }
+        
+        # Verify signature từ callback (production)
         return {
             "success": True,
             "transaction_id": callback_data.get("orderId"),
@@ -158,9 +231,18 @@ class ZaloPayGateway(PaymentGatewayBase):
         # response = requests.post(self.endpoint, json=data)
         # return response.json()
         
-        # Mô phỏng response
+        # Mô phỏng response (sandbox mode - KHÔNG TỐN PHÍ)
         payment_url = f"https://zalopay.vn/payment?app_trans_id={app_trans_id}"
-        qr_code = f"https://api.vietqr.io/v2/generate?accountNo=9704228524960933&accountName=NGUYEN VAN A&acqId=970415&amount={self.amount}&addInfo=Thanh toan don hang {self.order.id}&format=compact"
+        
+        # Tạo QR code từ payment URL (MIỄN PHÍ)
+        qr_data = {
+            "type": "zalopay",
+            "app_trans_id": app_trans_id,
+            "amount": self.amount,
+            "orderInfo": f"Thanh toan don hang {self.order.id}",
+            "payment_url": payment_url
+        }
+        qr_code = generate_qr_code_base64(qr_data, size=300)
         
         return {
             "success": True,
@@ -172,6 +254,14 @@ class ZaloPayGateway(PaymentGatewayBase):
     
     def verify_payment(self, callback_data):
         """Verify ZaloPay callback"""
+        # Trong development mode, tự động approve
+        if self.is_development:
+            return {
+                "success": True,
+                "transaction_id": callback_data.get("app_trans_id") or f"DEV_{self.order.id}",
+                "amount": callback_data.get("amount") or self.amount,
+            }
+        
         return {
             "success": True,
             "transaction_id": callback_data.get("app_trans_id"),
@@ -220,7 +310,16 @@ class VNPayGateway(PaymentGatewayBase):
         
         # Tạo payment URL
         payment_url = f"{self.endpoint}?{query_string}&vnp_SecureHash={secure_hash}"
-        qr_code = f"https://api.vietqr.io/v2/generate?accountNo=9704228524960933&accountName=NGUYEN VAN A&acqId=970415&amount={self.amount}&addInfo=Thanh toan don hang {self.order.id}&format=compact"
+        
+        # Tạo QR code từ payment URL (MIỄN PHÍ)
+        qr_data = {
+            "type": "vnpay",
+            "orderId": order_id,
+            "amount": self.amount,
+            "orderInfo": f"Thanh toan don hang {self.order.id}",
+            "payment_url": payment_url
+        }
+        qr_code = generate_qr_code_base64(qr_data, size=300)
         
         return {
             "success": True,
@@ -231,7 +330,15 @@ class VNPayGateway(PaymentGatewayBase):
     
     def verify_payment(self, callback_data):
         """Verify VNPay callback"""
-        # Verify secure hash
+        # Trong development mode, tự động approve
+        if self.is_development:
+            return {
+                "success": True,
+                "transaction_id": callback_data.get("vnp_TxnRef") or f"DEV_{self.order.id}",
+                "amount": callback_data.get("vnp_Amount", self.amount * 100) / 100,
+            }
+        
+        # Verify secure hash (production)
         return {
             "success": True,
             "transaction_id": callback_data.get("vnp_TxnRef"),

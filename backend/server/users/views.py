@@ -1,10 +1,15 @@
-﻿from django.contrib.auth.models import User
+﻿from django.contrib.auth import get_user_model
+from django.utils.crypto import get_random_string
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+import os
 
-from users.models import Admin, NhanVien, KhachHang, NCC
+User = get_user_model()
+
+from users.models import Admin, NhanVien, KhachHang, NCC, UserProfile
 from users.serializers import (
     AdminSerializer,
     NhanVienSerializer, KhachHangSerializer, NCCSerializer,
@@ -51,6 +56,188 @@ class RegisterAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def google_login(request):
+    """API đăng nhập bằng Google OAuth - Verify ID Token và tạo JWT"""
+    try:
+        token = request.data.get("token")
+        if not token:
+            return Response(
+                {"detail": "Token không được để trống."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Xử lý token: chuyển bytes string thành string nếu cần
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+        elif isinstance(token, str) and token.startswith("b'"):
+            # Xử lý trường hợp token là string representation của bytes
+            token = token.strip("b'").strip("'")
+        
+        # Đảm bảo token là string
+        if not isinstance(token, str):
+            return Response(
+                {"detail": "Token phải là string."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Kiểm tra format: JWT có 3 segments, access token thường không có format này
+        token_parts = token.split('.')
+        is_jwt = len(token_parts) == 3
+
+        # Verify Google token
+        try:
+            # Import google-auth chỉ khi cần thiết (lazy import)
+            try:
+                import google.auth.transport.requests
+                import google.oauth2.id_token
+            except ImportError:
+                return Response(
+                    {"detail": "Google OAuth chưa được cài đặt. Vui lòng cài đặt package: pip install google-auth"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Lấy Google Client ID từ environment variable
+            google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+            if not google_client_id:
+                return Response(
+                    {"detail": "Google OAuth chưa được cấu hình. Vui lòng liên hệ admin."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Verify Google token
+            request_obj = google.auth.transport.requests.Request()
+            idinfo = None
+            
+            # Nếu token có format JWT (3 segments), thử verify như ID token
+            if is_jwt:
+                try:
+                    idinfo = google.oauth2.id_token.verify_oauth2_token(
+                        token, request_obj, google_client_id
+                    )
+                except ValueError as e:
+                    # ID token không hợp lệ, thử như access token
+                    is_jwt = False
+            
+            # Nếu không phải JWT hoặc verify ID token thất bại, xử lý như access token
+            if not is_jwt or idinfo is None:
+                import requests
+                try:
+                    userinfo_response = requests.get(
+                        "https://www.googleapis.com/oauth2/v2/userinfo",
+                        headers={"Authorization": f"Bearer {token}"},
+                        timeout=10
+                    )
+                    if userinfo_response.status_code == 200:
+                        userinfo = userinfo_response.json()
+                        # Tạo dict tương tự như idinfo để xử lý thống nhất
+                        idinfo = {
+                            "email": userinfo.get("email"),
+                            "name": userinfo.get("name", ""),
+                            "picture": userinfo.get("picture"),
+                            "sub": userinfo.get("id")
+                        }
+                    else:
+                        error_detail = userinfo_response.json().get("error", {}).get("message", "Unknown error")
+                        raise ValueError(f"Google API error ({userinfo_response.status_code}): {error_detail}")
+                except requests.exceptions.RequestException as e:
+                    return Response(
+                        {"detail": f"Không thể kết nối với Google API: {str(e)}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                except Exception as e:
+                    return Response(
+                        {"detail": f"Token Google không hợp lệ: {str(e)}"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Lấy thông tin từ token (ID token hoặc từ UserInfo API)
+            google_email = idinfo.get("email")
+            google_name = idinfo.get("name", "")
+            google_picture = idinfo.get("picture")
+            google_sub = idinfo.get("sub")
+
+            if not google_email:
+                return Response(
+                    {"detail": "Không thể lấy email từ Google."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Tìm hoặc tạo user
+            user = None
+            try:
+                # Tìm user theo email
+                user = User.objects.get(email=google_email)
+            except User.DoesNotExist:
+                # Tạo user mới nếu chưa có
+                # Tạo username từ email (loại bỏ @ và domain)
+                base_username = google_email.split("@")[0]
+                username = base_username
+                counter = 1
+                # Đảm bảo username không trùng
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                # Tách tên thành first_name và last_name
+                name_parts = google_name.split(" ", 1) if google_name else ["", ""]
+                first_name = name_parts[0] if len(name_parts) > 0 else ""
+                last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+                # Tạo user mới với password random (an toàn cho Google OAuth)
+                # User không cần biết password, chỉ login bằng Google
+                random_password = get_random_string(length=50)
+                user = User.objects.create_user(
+                    username=username,
+                    email=google_email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=random_password
+                )
+                # Set unusable password để user không thể login bằng password thông thường
+                user.set_unusable_password()
+                user.save()
+
+                # Tạo UserProfile nếu chưa có
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                # Có thể lưu Google avatar URL vào profile nếu cần
+                # (Cần thêm field google_avatar_url vào UserProfile model nếu muốn)
+
+            # Tạo JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            # Lấy thông tin user đầy đủ
+            from users.serializers import UserSerializer
+            user_serializer = UserSerializer(user, context={"request": request})
+
+            return Response({
+                "access": access_token,
+                "refresh": refresh_token,
+                "user": user_serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            # Token không hợp lệ
+            return Response(
+                {"detail": f"Token Google không hợp lệ: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Lỗi xác thực Google: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Lỗi server: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @api_view(["GET"])

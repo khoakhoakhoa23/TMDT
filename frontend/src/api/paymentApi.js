@@ -20,6 +20,11 @@ const paymentApi = {
   getAll() {
     return axiosClient.get("payment/");
   },
+
+  // Simulate payment trong development mode (KHÔNG TỐN PHÍ)
+  simulatePayment(id) {
+    return axiosClient.post(`payment/${id}/simulate/`);
+  },
 };
 
 export default paymentApi;

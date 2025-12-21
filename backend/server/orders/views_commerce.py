@@ -97,6 +97,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 # Cập nhật order
                 self.perform_update(serializer)
                 
+                # Refresh instance từ database để có dữ liệu mới nhất
+                instance.refresh_from_db()
+                
                 # Cập nhật order.payment_status
                 instance.payment_status = "paid"
                 instance.save()
@@ -136,6 +139,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Không thể tạo order status notification: {str(e)}")
         
+        # Refresh instance và serializer để trả về dữ liệu mới nhất
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
     
     def partial_update(self, request, *args, **kwargs):

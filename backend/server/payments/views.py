@@ -158,6 +158,58 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 "paid_at": payment.paid_at,
             }
         )
+    
+    @action(detail=True, methods=["post"], url_path="simulate", permission_classes=[AllowAny])
+    def simulate_payment(self, request, pk=None):
+        """
+        Simulate payment trong development mode (KHÔNG TỐN PHÍ)
+        Chỉ hoạt động khi DEBUG=True và PAYMENT_DEV_MODE=True
+        """
+        from django.conf import settings
+        
+        if not (getattr(settings, 'DEBUG', False) and getattr(settings, 'PAYMENT_DEV_MODE', False)):
+            return Response(
+                {"detail": "Chức năng này chỉ khả dụng trong development mode"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        payment = self.get_object()
+        
+        if payment.status in ["completed", "success"]:
+            return Response(
+                {"detail": "Payment đã được thanh toán"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Simulate payment thành công
+        with transaction.atomic():
+            payment.status = "completed"
+            payment.paid_at = timezone.now()
+            payment.callback_data = {"simulated": True, "dev_mode": True}
+            payment.save()
+            
+            # Cập nhật order status
+            payment.order.payment_status = "paid"
+            payment.order.status = "paid"
+            payment.order.save()
+            
+            # Tạo notification
+            try:
+                from core.notifications import create_payment_success_notification
+                create_payment_success_notification(payment.order, payment)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Không thể tạo payment notification: {str(e)}")
+        
+        return Response(
+            {
+                "success": True,
+                "message": "Payment đã được simulate thành công (Development Mode)",
+                "status": payment.status,
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 @api_view(["POST"])

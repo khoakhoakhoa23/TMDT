@@ -912,26 +912,56 @@ const Payment = () => {
                   </div>
                 </div>
 
-                <div className="flex space-x-4 w-full">
-                  <button
-                    onClick={() => {
-                      setShowQRCode(false);
-                      setPaymentData(null);
-                      setPaymentStatus("pending");
-                      setCurrentStep(3);
-                    }}
-                    className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 font-semibold"
-                  >
-                    Quay lại
-                  </button>
-                  {(paymentStatus === "completed" || paymentStatus === "success") && (
+                <div className="flex flex-col space-y-3 w-full">
+                  {/* Development Mode: Simulate Payment Button */}
+                  {import.meta.env.DEV && paymentStatus === "pending" && (
                     <button
-                      onClick={() => navigate("/dashboard")}
-                      className="flex-1 bg-blue-600 dark:bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          const response = await paymentApi.simulatePayment(paymentData.id);
+                          if (response.data.success) {
+                            setPaymentStatus("completed");
+                            alert("Payment đã được simulate thành công (Development Mode)");
+                            setTimeout(() => {
+                              navigate("/dashboard");
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          console.error("Simulate payment error:", error);
+                          alert("Không thể simulate payment. Có thể không phải development mode.");
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className="w-full px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 transition-colors duration-300 font-semibold"
                     >
-                      Xem đơn hàng
+                      🧪 Simulate Payment (Dev Mode - Không tốn phí)
                     </button>
                   )}
+                  
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => {
+                        setShowQRCode(false);
+                        setPaymentData(null);
+                        setPaymentStatus("pending");
+                        setCurrentStep(3);
+                      }}
+                      className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300 font-semibold"
+                    >
+                      Quay lại
+                    </button>
+                    {(paymentStatus === "completed" || paymentStatus === "success") && (
+                      <button
+                        onClick={() => navigate("/dashboard")}
+                        className="flex-1 bg-blue-600 dark:bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
+                      >
+                        Xem đơn hàng
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

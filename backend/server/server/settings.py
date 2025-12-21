@@ -14,11 +14,17 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+# Load từ thư mục backend (parent của server)
+env_path = BASE_DIR.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Fallback: load từ thư mục hiện tại
+    load_dotenv()
 
 
 # Quick-start development settings - unsuitable for production
@@ -33,7 +39,15 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# Payment Development Mode - Tự động approve payment trong test (KHÔNG TỐN PHÍ)
+# Chỉ bật khi DEBUG=True
+PAYMENT_DEV_MODE = os.getenv("PAYMENT_DEV_MODE", "True" if DEBUG else "False") == "True"
+
+ALLOWED_HOSTS = [
+    host.strip() 
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -65,9 +79,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in os.getenv(
+        "DJANGO_CORS_ALLOWED_ORIGINS", 
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if origin.strip()
+]
 
 # Allow all origins in development (for easier testing)
 if DEBUG:
@@ -122,11 +141,11 @@ WSGI_APPLICATION = 'server.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'web_ban_hang',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'web_ban_hang'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', '123456'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -184,7 +203,6 @@ REST_FRAMEWORK = {
     # Trong môi trường development: TẮT hoặc TĂNG RẤT CAO
     # Trong production: BẬT với rate hợp lý
     "DEFAULT_THROTTLE_CLASSES": (
-        # TẮT throttling trong development
         [] if DEBUG else [
             "rest_framework.throttling.AnonRateThrottle",
             "rest_framework.throttling.UserRateThrottle",

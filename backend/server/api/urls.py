@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, get_me, upload_avatar
+from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout
 from payments.views import PaymentViewSet, payment_callback
@@ -36,6 +36,7 @@ urlpatterns = [
     path("", include(router.urls)),
     path("register/", RegisterAPIView.as_view(), name="register"),
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("google-login/", google_login, name="google_login"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("checkout/", checkout, name="checkout"),
     path("payment/callback/<int:order_id>/", payment_callback, name="payment_callback"),

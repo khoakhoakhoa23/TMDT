@@ -22,6 +22,12 @@ const authApi = {
     return axiosClient.post("refresh/", {
       refresh: refreshToken,
     });
+  },
+
+  googleLogin(token) {
+    return axiosClient.post("google-login/", {
+      token: token,
+    });
   }
 };
 
