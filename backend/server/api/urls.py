@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login
+from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout
 from payments.views import PaymentViewSet, payment_callback
@@ -37,6 +37,7 @@ urlpatterns = [
     path("register/", RegisterAPIView.as_view(), name="register"),
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("google-login/", google_login, name="google_login"),
+    path("facebook-login/", facebook_login, name="facebook_login"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("checkout/", checkout, name="checkout"),
     path("payment/callback/<int:order_id>/", payment_callback, name="payment_callback"),
@@ -45,6 +46,10 @@ urlpatterns = [
     path("users/update-profile/", update_profile, name="update_profile"),
     path("users/change-password/", change_password, name="change_password"),
     path("users/upload-avatar/", upload_avatar, name="upload_avatar"),
+    path("users/verify-email/", verify_email, name="verify_email"),
+    path("users/resend-verification/", resend_verification_email, name="resend_verification"),
+    path("users/request-password-reset/", request_password_reset, name="request_password_reset"),
+    path("users/reset-password/", reset_password, name="reset_password"),
     path("thongke/doanhthu-homnay/", doanh_thu_hom_nay),
     path("thongke/doanhthu/<int:year>/<int:month>/", doanh_thu_thang),
     path("thongke/tong-xe-da-ban/", tong_xe_da_ban),

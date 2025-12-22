@@ -456,12 +456,34 @@ const Detail = () => {
                 {reviews.map((review) => (
                   <div key={review.id} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0 last:pb-0 transition-colors duration-300">
                     <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg transition-colors duration-300">
-                          {review.user_name?.charAt(0)?.toUpperCase() ||
-                            review.user?.username?.charAt(0)?.toUpperCase() ||
-                            "U"}
-                        </span>
+                      {/* Avatar */}
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden transition-colors duration-300">
+                        {review.user?.avatar_url ? (
+                          <img
+                            src={review.user.avatar_url}
+                            alt={review.user_name || review.user?.username || "User"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback to initials if image fails
+                              e.target.style.display = "none";
+                              const parent = e.target.parentElement;
+                              const fallback = parent.querySelector(".avatar-fallback");
+                              if (fallback) fallback.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        {/* Fallback: Initials */}
+                        <div
+                          className={`w-full h-full bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center ${
+                            review.user?.avatar_url ? "hidden avatar-fallback" : ""
+                          } transition-colors duration-300`}
+                        >
+                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg transition-colors duration-300">
+                            {review.user_name?.charAt(0)?.toUpperCase() ||
+                              review.user?.username?.charAt(0)?.toUpperCase() ||
+                              "U"}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">

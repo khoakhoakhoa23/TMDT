@@ -34,13 +34,44 @@ def create_order_status_notification(order, old_status, new_status):
     title = "Cập nhật trạng thái đơn hàng"
     message = f"Đơn hàng #{order.id} đã chuyển từ '{old_status_text}' sang '{new_status_text}'"
     
-    return create_notification(
+    notification = create_notification(
         user=order.user,
         type="order_status",
         title=title,
         message=message,
         order=order,
     )
+    
+    # Gửi real-time notification và order update
+    try:
+        from core.consumers import send_notification, send_order_update
+        send_notification(
+            order.user.id,
+            {
+                "id": notification.id,
+                "type": "order_status",
+                "title": title,
+                "message": message,
+                "order_id": order.id,
+                "created_at": notification.created_at.isoformat(),
+            }
+        )
+        # Gửi order update
+        send_order_update(
+            order.id,
+            {
+                "order_id": order.id,
+                "status": new_status,
+                "old_status": old_status,
+                "message": message,
+            }
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Không thể gửi real-time notification: {str(e)}")
+    
+    return notification
 
 
 def create_payment_success_notification(order, payment):
@@ -48,13 +79,37 @@ def create_payment_success_notification(order, payment):
     title = "Thanh toán thành công"
     message = f"Đơn hàng #{order.id} đã được thanh toán thành công với số tiền {payment.amount:,.0f} VNĐ"
     
-    return create_notification(
+    notification = create_notification(
         user=order.user,
         type="payment_success",
         title=title,
         message=message,
         order=order,
     )
+    
+    # Gửi real-time notification qua WebSocket (nếu channels đã được cài)
+    try:
+        from core.consumers import send_notification
+        send_notification(
+            order.user.id,
+            {
+                "id": notification.id,
+                "type": "payment_success",
+                "title": title,
+                "message": message,
+                "order_id": order.id,
+                "created_at": notification.created_at.isoformat(),
+            }
+        )
+    except ImportError:
+        # Channels chưa được cài, bỏ qua real-time
+        pass
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Không thể gửi real-time notification: {str(e)}")
+    
+    return notification
 
 
 def create_rental_expiry_notification(order):

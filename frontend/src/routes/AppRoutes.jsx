@@ -14,6 +14,8 @@ import AdminProfilePage from "../pages/admin/ProfilePage";
 import AnalyticsPage from "../pages/admin/AnalyticsPage";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 import PrivateRoute from "./PrivateRoute";
 import AdminRoute from "./AdminRoute";
 
@@ -27,6 +29,8 @@ const AppRoutes = () => {
         <Route path="detail/:id" element={<Detail />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password/:token" element={<ResetPassword />} />
       </Route>
 
       {/* Protected routes */}

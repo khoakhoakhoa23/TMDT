@@ -47,11 +47,13 @@ class LoaiXeViewSet(viewsets.ModelViewSet):
 # ==================== Xe ViewSet ====================
 
 class XeViewSet(viewsets.ModelViewSet):
-    """ViewSet cho Xe"""
+    """ViewSet cho Xe với advanced search và filters"""
     queryset = Xe.objects.select_related("loai_xe").order_by('ma_xe', 'ten_xe')
     serializer_class = XeSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["ten_xe", "mau_sac", "loai_xe__ten_loai", "seo_keywords"]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["ten_xe", "mau_sac", "loai_xe__ten_loai", "seo_keywords", "mo_ta_ngan", "mo_ta"]
+    ordering_fields = ["gia", "gia_thue", "so_luong", "created_at", "ten_xe"]
+    ordering = ["-created_at"]  # Default ordering
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
@@ -89,28 +91,139 @@ class XeViewSet(viewsets.ModelViewSet):
             raise
 
     def get_queryset(self):
-        # Đảm bảo có ordering để tránh cảnh báo pagination
-        # Sử dụng ordering rõ ràng và nhất quán
-        qs = Xe.objects.select_related("loai_xe").order_by('ma_xe', 'ten_xe')
+        """Advanced filtering với nhiều tiêu chí"""
+        from django.db.models import Q
+        
+        qs = Xe.objects.select_related("loai_xe")
+        
+        # Price filters
         min_price = self.request.query_params.get("min_price")
         max_price = self.request.query_params.get("max_price")
-        loai = self.request.query_params.get("loai")
+        if min_price:
+            try:
+                qs = qs.filter(gia__gte=int(min_price))
+            except ValueError:
+                pass
+        if max_price:
+            try:
+                qs = qs.filter(gia__lte=int(max_price))
+            except ValueError:
+                pass
+        
+        # Rental price filters
         gia_thue_min = self.request.query_params.get("gia_thue_min")
         gia_thue_max = self.request.query_params.get("gia_thue_max")
-
-        if min_price is not None:
-            qs = qs.filter(gia__gte=min_price)
-        if max_price is not None:
-            qs = qs.filter(gia__lte=max_price)
-        if gia_thue_min is not None:
-            qs = qs.filter(gia_thue__gte=gia_thue_min)
-        if gia_thue_max is not None:
-            qs = qs.filter(gia_thue__lte=gia_thue_max)
+        if gia_thue_min:
+            try:
+                qs = qs.filter(gia_thue__gte=int(gia_thue_min))
+            except ValueError:
+                pass
+        if gia_thue_max:
+            try:
+                qs = qs.filter(gia_thue__lte=int(gia_thue_max))
+            except ValueError:
+                pass
+        
+        # Category filter
+        loai = self.request.query_params.get("loai")
         if loai:
             qs = qs.filter(loai_xe__ma_loai=loai)
-
-        # Đảm bảo luôn có ordering, ngay cả sau khi filter
-        return qs.order_by('ma_xe', 'ten_xe')
+        
+        # Status filter
+        status = self.request.query_params.get("status")
+        if status:
+            qs = qs.filter(trang_thai=status)
+        
+        # Stock filter
+        in_stock = self.request.query_params.get("in_stock")
+        if in_stock and in_stock.lower() == "true":
+            qs = qs.filter(so_luong__gt=0, trang_thai="in_stock")
+        
+        # Color filter
+        color = self.request.query_params.get("color")
+        if color:
+            qs = qs.filter(mau_sac__icontains=color)
+        
+        # Fuel type filter
+        fuel_type = self.request.query_params.get("fuel_type")
+        if fuel_type:
+            qs = qs.filter(loai_nhien_lieu=fuel_type)
+        
+        # Transmission filter
+        transmission = self.request.query_params.get("transmission")
+        if transmission:
+            qs = qs.filter(hop_so=transmission)
+        
+        # Seats filter
+        min_seats = self.request.query_params.get("min_seats")
+        max_seats = self.request.query_params.get("max_seats")
+        if min_seats:
+            try:
+                qs = qs.filter(so_cho__gte=int(min_seats))
+            except ValueError:
+                pass
+        if max_seats:
+            try:
+                qs = qs.filter(so_cho__lte=int(max_seats))
+            except ValueError:
+                pass
+        
+        # Full-text search với PostgreSQL (nếu có)
+        search_query = self.request.query_params.get("search")
+        if search_query:
+            # Sử dụng Q objects để search nhiều fields
+            qs = qs.filter(
+                Q(ten_xe__icontains=search_query) |
+                Q(mau_sac__icontains=search_query) |
+                Q(loai_xe__ten_loai__icontains=search_query) |
+                Q(seo_keywords__icontains=search_query) |
+                Q(mo_ta_ngan__icontains=search_query) |
+                Q(mo_ta__icontains=search_query)
+            )
+        
+        # Ordering được xử lý bởi OrderingFilter
+        return qs
+    
+    @action(detail=False, methods=["get"], url_path="search-suggestions")
+    def search_suggestions(self, request):
+        """API trả về search suggestions/autocomplete"""
+        query = request.query_params.get("q", "").strip()
+        
+        if not query or len(query) < 2:
+            return Response({"suggestions": []})
+        
+        # Lấy suggestions từ tên xe và loại xe
+        from django.db.models import Q
+        
+        cars = Xe.objects.filter(
+            Q(ten_xe__icontains=query) | Q(loai_xe__ten_loai__icontains=query)
+        ).select_related("loai_xe")[:10]
+        
+        suggestions = []
+        seen = set()
+        
+        for car in cars:
+            # Thêm tên xe
+            if car.ten_xe.lower() not in seen:
+                suggestions.append({
+                    "type": "car",
+                    "text": car.ten_xe,
+                    "value": car.ten_xe,
+                    "id": car.ma_xe
+                })
+                seen.add(car.ten_xe.lower())
+            
+            # Thêm loại xe
+            if car.loai_xe.ten_loai.lower() not in seen:
+                suggestions.append({
+                    "type": "category",
+                    "text": car.loai_xe.ten_loai,
+                    "value": car.loai_xe.ten_loai,
+                    "id": car.loai_xe.ma_loai
+                })
+                seen.add(car.loai_xe.ten_loai.lower())
+        
+        return Response({"suggestions": suggestions[:10]})
 
 
 # ==================== Review ViewSet ====================

@@ -8,6 +8,10 @@ import { useGoogleLogin } from "@react-oauth/google";
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const HAS_GOOGLE_OAUTH = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.trim() !== "";
 
+// Kiểm tra xem có Facebook App ID không
+const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
+const HAS_FACEBOOK_OAUTH = FACEBOOK_APP_ID && FACEBOOK_APP_ID.trim() !== "";
+
 // Component riêng cho Google Login Button - chỉ render khi có GoogleOAuthProvider
 function GoogleLoginButton({ onSuccess, onError, disabled, loading }) {
   // Chỉ sử dụng hook khi có client_id
@@ -73,12 +77,126 @@ function GoogleLoginButton({ onSuccess, onError, disabled, loading }) {
   );
 }
 
+// Component riêng cho Facebook Login Button
+function FacebookLoginButton({ onSuccess, onError, disabled, loading }) {
+  useEffect(() => {
+    // Load Facebook SDK nếu chưa có
+    if (!HAS_FACEBOOK_OAUTH) return;
+
+    if (window.FB) {
+      // SDK đã được load
+      return;
+    }
+
+    // Tạo script tag để load Facebook SDK
+    const script = document.createElement("script");
+    script.src = "https://connect.facebook.net/vi_VN/sdk.js";
+    script.async = true;
+    script.defer = true;
+    script.crossOrigin = "anonymous";
+    script.onload = () => {
+      // Initialize Facebook SDK
+      window.FB.init({
+        appId: FACEBOOK_APP_ID,
+        cookie: true,
+        xfbml: true,
+        version: "v18.0",
+      });
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup: remove script khi component unmount
+      const existingScript = document.querySelector(
+        'script[src="https://connect.facebook.net/vi_VN/sdk.js"]'
+      );
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, []);
+
+  if (!HAS_FACEBOOK_OAUTH) {
+    return null;
+  }
+
+  const handleFacebookLogin = () => {
+    if (!window.FB) {
+      onError(new Error("Facebook SDK chưa sẵn sàng. Vui lòng thử lại sau."));
+      return;
+    }
+
+    // Kiểm tra xem có đang chạy trên HTTPS không
+    const isHTTPS = window.location.protocol === 'https:';
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    // Facebook yêu cầu HTTPS, nhưng cho phép localhost trong development
+    // Nếu không phải HTTPS và không phải localhost, báo lỗi
+    if (!isHTTPS && !isLocalhost) {
+      onError(new Error("Facebook Login yêu cầu HTTPS. Vui lòng sử dụng HTTPS hoặc localhost."));
+      return;
+    }
+
+    try {
+      window.FB.login(
+        (response) => {
+          if (response.authResponse) {
+            // User đã đăng nhập và cấp quyền
+            const accessToken = response.authResponse.accessToken;
+            onSuccess({ access_token: accessToken });
+          } else {
+            // User đã đăng nhập nhưng không cấp quyền
+            onError(new Error("Bạn cần cấp quyền để đăng nhập."));
+          }
+        },
+        {
+          // Tạm thời chỉ dùng public_profile nếu email permission chưa được approve
+          // Sau khi email permission được approve, có thể thêm lại "email,public_profile"
+          scope: "public_profile",
+          return_scopes: true,
+        }
+      );
+    } catch (error) {
+      // Xử lý lỗi HTTPS requirement
+      if (error.message && error.message.includes('http pages')) {
+        onError(new Error("Facebook Login yêu cầu HTTPS. Vui lòng chạy app trên HTTPS hoặc dùng localhost."));
+      } else {
+        onError(error);
+      }
+    }
+  };
+
+  return (
+    <>
+      {/* Facebook Sign In Button */}
+      <button
+        type="button"
+        onClick={handleFacebookLogin}
+        disabled={disabled || loading}
+        className="w-full flex items-center justify-center gap-3 bg-[#1877F2] dark:bg-[#1877F2] text-white p-2 rounded-lg hover:bg-[#166FE5] dark:hover:bg-[#166FE5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+      >
+        {loading ? (
+          <span>Đang xử lý...</span>
+        ) : (
+          <>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+            </svg>
+            <span>Đăng nhập bằng Facebook</span>
+          </>
+        )}
+      </button>
+    </>
+  );
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -136,6 +254,58 @@ export default function Login() {
     console.error("Google OAuth error:", error);
     setError("Đăng nhập bằng Google thất bại. Vui lòng thử lại!");
     setGoogleLoading(false);
+  };
+
+  // Facebook Login Handler
+  const handleFacebookSuccess = async (tokenResponse) => {
+    setFacebookLoading(true);
+    setError("");
+    
+    try {
+      // Gửi token về backend để verify và lấy JWT
+      const res = await authApi.facebookLogin(tokenResponse.access_token);
+
+      if (!res.data || !res.data.access) {
+        throw new Error("Invalid response from server: missing access token");
+      }
+
+      // Lưu JWT tokens vào localStorage
+      localStorage.setItem("access_token", res.data.access);
+      if (res.data.refresh) {
+        localStorage.setItem("refresh_token", res.data.refresh);
+      }
+
+      // Update user context
+      if (res.data.user) {
+        updateUser({
+          id: res.data.user.id,
+          username: res.data.user.username,
+          email: res.data.user.email,
+          first_name: res.data.user.first_name,
+          last_name: res.data.user.last_name,
+          role: res.data.user.role || "user",
+          avatar_url: res.data.user.avatar_url,
+          profile: res.data.user.profile,
+        });
+      }
+
+      const redirect = location.state?.from?.pathname || "/";
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.detail ||
+        "Đăng nhập bằng Facebook thất bại. Vui lòng thử lại!";
+      setError(errorMessage);
+      console.error("Facebook login error:", err);
+    } finally {
+      setFacebookLoading(false);
+    }
+  };
+
+  const handleFacebookError = (error) => {
+    console.error("Facebook OAuth error:", error);
+    setError("Đăng nhập bằng Facebook thất bại. Vui lòng thử lại!");
+    setFacebookLoading(false);
   };
 
   useEffect(() => {
@@ -252,7 +422,7 @@ export default function Login() {
         <button
           type="submit"
           className="bg-green-600 dark:bg-green-500 text-white p-2 rounded-lg mt-2 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed hover:bg-green-700 dark:hover:bg-green-600 transition-colors duration-300"
-          disabled={loading || googleLoading}
+          disabled={loading || googleLoading || facebookLoading}
         >
           {loading ? "Đang đăng nhập..." : "Đăng nhập"}
         </button>
@@ -261,16 +431,37 @@ export default function Login() {
         <GoogleLoginButton
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
-          disabled={loading}
+          disabled={loading || facebookLoading}
           loading={googleLoading}
         />
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
-          Chưa có tài khoản?{" "}
-          <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300">
-            Đăng ký ngay
-          </Link>
-        </p>
+        {/* Facebook Sign In Button - chỉ hiển thị nếu có Facebook OAuth */}
+        <FacebookLoginButton
+          onSuccess={handleFacebookSuccess}
+          onError={handleFacebookError}
+          disabled={loading || googleLoading}
+          loading={facebookLoading}
+        />
+
+        <div className="text-center space-y-2">
+          <p className="text-sm">
+            <Link
+              to="/forgot-password"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300"
+            >
+              Quên mật khẩu?
+            </Link>
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/register"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300"
+            >
+              Đăng ký ngay
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );

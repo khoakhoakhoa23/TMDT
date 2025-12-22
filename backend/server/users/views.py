@@ -60,6 +60,192 @@ class RegisterAPIView(generics.CreateAPIView):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+def facebook_login(request):
+    """API đăng nhập bằng Facebook OAuth - Verify Access Token và tạo JWT"""
+    try:
+        token = request.data.get("token")
+        if not token:
+            return Response(
+                {"detail": "Token không được để trống."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Xử lý token: chuyển bytes string thành string nếu cần
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+        elif isinstance(token, str) and token.startswith("b'"):
+            token = token.strip("b'").strip("'")
+        
+        # Đảm bảo token là string
+        if not isinstance(token, str):
+            return Response(
+                {"detail": "Token phải là string."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify Facebook token bằng cách gọi Graph API
+        try:
+            import requests
+            
+            # Lấy Facebook App ID và App Secret từ environment variables
+            facebook_app_id = os.getenv("FACEBOOK_APP_ID")
+            facebook_app_secret = os.getenv("FACEBOOK_APP_SECRET")
+            
+            if not facebook_app_id or not facebook_app_secret:
+                return Response(
+                    {"detail": "Facebook OAuth chưa được cấu hình. Vui lòng liên hệ admin."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Bước 1: Verify token và lấy user ID
+            debug_url = f"https://graph.facebook.com/debug_token"
+            debug_params = {
+                "input_token": token,
+                "access_token": f"{facebook_app_id}|{facebook_app_secret}"
+            }
+            
+            debug_response = requests.get(debug_url, params=debug_params, timeout=10)
+            
+            if debug_response.status_code != 200:
+                return Response(
+                    {"detail": f"Token Facebook không hợp lệ. Lỗi: {debug_response.text}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                debug_data = debug_response.json()
+            except Exception as e:
+                return Response(
+                    {"detail": f"Không thể parse response từ Facebook. Lỗi: {str(e)}, Response: {debug_response.text}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if not debug_data.get("data", {}).get("is_valid"):
+                error_message = debug_data.get("data", {}).get("error", {}).get("message", "Token không hợp lệ")
+                return Response(
+                    {"detail": f"Token Facebook không hợp lệ hoặc đã hết hạn. Chi tiết: {error_message}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            user_id = debug_data.get("data", {}).get("user_id")
+            app_id = debug_data.get("data", {}).get("app_id")
+            
+            # Verify app_id khớp với FACEBOOK_APP_ID
+            # Chuyển sang string để so sánh (app_id có thể là string hoặc int)
+            if str(app_id) != str(facebook_app_id):
+                return Response(
+                    {"detail": f"Token Facebook không thuộc ứng dụng này. App ID: {app_id}, Expected: {facebook_app_id}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Bước 2: Lấy thông tin user từ Graph API
+            # Lấy picture với type=large để có chất lượng tốt hơn
+            userinfo_url = f"https://graph.facebook.com/v18.0/{user_id}"
+            userinfo_params = {
+                "fields": "id,name,email,picture.type(large)",
+                "access_token": token
+            }
+            
+            userinfo_response = requests.get(userinfo_url, params=userinfo_params, timeout=10)
+            
+            if userinfo_response.status_code != 200:
+                return Response(
+                    {"detail": f"Không thể lấy thông tin từ Facebook. Lỗi: {userinfo_response.text}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            userinfo = userinfo_response.json()
+            
+            facebook_email = userinfo.get("email")
+            facebook_name = userinfo.get("name", "")
+            facebook_picture = userinfo.get("picture", {}).get("data", {}).get("url") if userinfo.get("picture") else None
+            facebook_id = userinfo.get("id")
+
+            # Nếu không có email (chỉ có public_profile), tạo email từ user_id
+            if not facebook_email:
+                # Tạo email giả từ Facebook ID để user có thể đăng nhập
+                # Format: facebook_{user_id}@facebook.local
+                facebook_email = f"facebook_{facebook_id}@facebook.local"
+
+            # Tìm hoặc tạo user
+            user = None
+            try:
+                # Tìm user theo email
+                user = User.objects.get(email=facebook_email)
+                # Cập nhật avatar URL nếu có
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                if facebook_picture:
+                    profile.avatar_url = facebook_picture
+                    profile.save()
+            except User.DoesNotExist:
+                # Tạo user mới nếu chưa có
+                base_username = facebook_email.split("@")[0]
+                username = base_username
+                counter = 1
+                # Đảm bảo username không trùng
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                # Tách tên thành first_name và last_name
+                name_parts = facebook_name.split(" ", 1) if facebook_name else ["", ""]
+                first_name = name_parts[0] if len(name_parts) > 0 else ""
+                last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+                # Tạo user mới với password random
+                random_password = get_random_string(length=50)
+                user = User.objects.create_user(
+                    username=username,
+                    email=facebook_email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    password=random_password
+                )
+                # Set unusable password để user không thể login bằng password thông thường
+                user.set_unusable_password()
+                user.save()
+
+                # Tạo UserProfile và lưu Facebook avatar URL
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                if facebook_picture:
+                    profile.avatar_url = facebook_picture
+                    profile.save()
+
+            # Tạo JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            # Lấy thông tin user đầy đủ
+            from users.serializers import UserSerializer
+            user_serializer = UserSerializer(user, context={"request": request})
+
+            return Response({
+                "access": access_token,
+                "refresh": refresh_token,
+                "user": user_serializer.data
+            }, status=status.HTTP_200_OK)
+
+        except requests.exceptions.RequestException as e:
+            return Response(
+                {"detail": f"Không thể kết nối với Facebook API: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"detail": f"Lỗi xác thực Facebook: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    except Exception as e:
+        return Response(
+            {"detail": f"Lỗi server: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def google_login(request):
     """API đăng nhập bằng Google OAuth - Verify ID Token và tạo JWT"""
     try:
@@ -157,7 +343,7 @@ def google_login(request):
             # Lấy thông tin từ token (ID token hoặc từ UserInfo API)
             google_email = idinfo.get("email")
             google_name = idinfo.get("name", "")
-            google_picture = idinfo.get("picture")
+            google_picture = idinfo.get("picture")  # URL trực tiếp từ Google
             google_sub = idinfo.get("sub")
 
             if not google_email:
@@ -171,6 +357,11 @@ def google_login(request):
             try:
                 # Tìm user theo email
                 user = User.objects.get(email=google_email)
+                # Cập nhật avatar URL nếu có
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                if google_picture:
+                    profile.avatar_url = google_picture
+                    profile.save()
             except User.DoesNotExist:
                 # Tạo user mới nếu chưa có
                 # Tạo username từ email (loại bỏ @ và domain)
@@ -387,6 +578,205 @@ def change_password(request):
     user.save()
     
     return Response({"detail": "Đổi mật khẩu thành công."})
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """Yêu cầu reset password - gửi email"""
+    email = request.data.get("email")
+    
+    if not email:
+        return Response(
+            {"detail": "Email không được để trống."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        # Không tiết lộ email có tồn tại hay không (security best practice)
+        return Response(
+            {"detail": "Nếu email tồn tại, chúng tôi đã gửi link reset password."},
+            status=status.HTTP_200_OK
+        )
+    
+    # Tạo reset token
+    from django.utils.crypto import get_random_string
+    from django.utils import timezone
+    from users.models import UserProfile
+    
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    reset_token = get_random_string(length=64)
+    profile.email_verification_token = reset_token  # Tạm dùng field này cho reset token
+    profile.email_verification_sent_at = timezone.now()
+    profile.save()
+    
+    # Gửi email reset password
+    try:
+        from core.email_service import EmailService
+        email_sent = EmailService.send_password_reset_email(user, reset_token)
+        
+        if not email_sent:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error("Failed to send password reset email: EmailService returned False")
+            return Response(
+                {"detail": "Không thể gửi email. Vui lòng kiểm tra cấu hình email và thử lại sau."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send password reset email: {str(e)}", exc_info=True)
+        return Response(
+            {"detail": f"Không thể gửi email: {str(e)}. Vui lòng kiểm tra cấu hình email trong .env file."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+    return Response(
+        {"detail": "Nếu email tồn tại, chúng tôi đã gửi link reset password."},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """Reset password với token"""
+    token = request.data.get("token")
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirm_password")
+    
+    if not token or not new_password or not confirm_password:
+        return Response(
+            {"detail": "Vui lòng điền đầy đủ thông tin."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if new_password != confirm_password:
+        return Response(
+            {"detail": "Mật khẩu mới và xác nhận mật khẩu không khớp."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(new_password) < 8:
+        return Response(
+            {"detail": "Mật khẩu mới phải có ít nhất 8 ký tự."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Tìm user với token
+    from users.models import UserProfile
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        profile = UserProfile.objects.get(email_verification_token=token)
+        
+        # Kiểm tra token còn hiệu lực không (1 giờ)
+        if profile.email_verification_sent_at:
+            time_diff = timezone.now() - profile.email_verification_sent_at
+            if time_diff > timedelta(hours=1):
+                return Response(
+                    {"detail": "Token đã hết hạn. Vui lòng yêu cầu reset lại."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Reset password
+        user = profile.user
+        user.set_password(new_password)
+        user.save()
+        
+        # Xóa token
+        profile.email_verification_token = ""
+        profile.save()
+        
+        return Response({"detail": "Đặt lại mật khẩu thành công."})
+        
+    except UserProfile.DoesNotExist:
+        return Response(
+            {"detail": "Token không hợp lệ hoặc đã hết hạn."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def verify_email(request):
+    """Verify email với token"""
+    token = request.data.get("token")
+    
+    if not token:
+        return Response(
+            {"detail": "Token không được để trống."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    from users.models import UserProfile
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    try:
+        profile = UserProfile.objects.get(email_verification_token=token)
+        
+        # Kiểm tra token còn hiệu lực không (24 giờ)
+        if profile.email_verification_sent_at:
+            time_diff = timezone.now() - profile.email_verification_sent_at
+            if time_diff > timedelta(hours=24):
+                return Response(
+                    {"detail": "Token đã hết hạn. Vui lòng đăng ký lại."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Verify email
+        profile.email_verified = True
+        profile.email_verification_token = ""
+        profile.save()
+        
+        return Response({"detail": "Email đã được xác thực thành công."})
+        
+    except UserProfile.DoesNotExist:
+        return Response(
+            {"detail": "Token không hợp lệ hoặc đã hết hạn."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def resend_verification_email(request):
+    """Gửi lại email verification"""
+    user = request.user
+    
+    if user.profile.email_verified:
+        return Response(
+            {"detail": "Email đã được xác thực rồi."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    from django.utils.crypto import get_random_string
+    from django.utils import timezone
+    
+    profile = user.profile
+    verification_token = get_random_string(length=64)
+    profile.email_verification_token = verification_token
+    profile.email_verification_sent_at = timezone.now()
+    profile.save()
+    
+    # Gửi email verification
+    try:
+        from core.email_service import EmailService
+        EmailService.send_verification_email(user, verification_token)
+        return Response({"detail": "Email xác thực đã được gửi lại."})
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send verification email: {str(e)}")
+        return Response(
+            {"detail": "Không thể gửi email. Vui lòng thử lại sau."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 # ==================== User ViewSet ====================

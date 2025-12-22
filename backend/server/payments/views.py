@@ -125,14 +125,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
                     payment.order.status = "paid"
                     payment.order.save()
                     
-                    # Tạo notification thanh toán thành công
+                    # Tạo notification và gửi email thanh toán thành công
                     try:
                         from core.notifications import create_payment_success_notification
                         create_payment_success_notification(payment.order, payment)
+                        
+                        # Gửi email thanh toán thành công
+                        from core.email_service import EmailService
+                        EmailService.send_payment_success_email(payment.order, payment)
                     except Exception as e:
                         import logging
                         logger = logging.getLogger(__name__)
-                        logger.warning(f"Không thể tạo payment notification: {str(e)}")
+                        logger.warning(f"Không thể tạo payment notification/email: {str(e)}")
                 
                 return Response({"RspCode": "00", "Message": "Success"})
             else:
@@ -193,14 +197,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
             payment.order.status = "paid"
             payment.order.save()
             
-            # Tạo notification
+            # Tạo notification và gửi email
             try:
                 from core.notifications import create_payment_success_notification
                 create_payment_success_notification(payment.order, payment)
+                
+                # Gửi email thanh toán thành công
+                from core.email_service import EmailService
+                EmailService.send_payment_success_email(payment.order, payment)
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.warning(f"Không thể tạo payment notification: {str(e)}")
+                logger.warning(f"Không thể tạo payment notification/email: {str(e)}")
         
         return Response(
             {
