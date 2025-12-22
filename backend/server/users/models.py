@@ -52,7 +52,13 @@ class UserProfile(models.Model):
         upload_to="avatars/",
         null=True,
         blank=True,
-        help_text="Ảnh đại diện của người dùng"
+        help_text="Ảnh đại diện của người dùng (upload file)"
+    )
+    avatar_url = models.URLField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Avatar URL từ OAuth provider (Facebook, Google, etc.)"
     )
     phone = models.CharField(max_length=20, blank=True, help_text="Số điện thoại")
     address = models.CharField(max_length=500, blank=True, help_text="Địa chỉ")
@@ -63,6 +69,9 @@ class UserProfile(models.Model):
         blank=True,
         help_text="Giới tính"
     )
+    email_verified = models.BooleanField(default=False, help_text="Email đã được xác thực chưa")
+    email_verification_token = models.CharField(max_length=100, blank=True, null=True, help_text="Token để verify email")
+    email_verification_sent_at = models.DateTimeField(null=True, blank=True, help_text="Thời gian gửi email verification")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

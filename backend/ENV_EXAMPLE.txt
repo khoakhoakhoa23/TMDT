@@ -26,7 +26,37 @@ DJANGO_CSRF_COOKIE_SECURE=False
 # Client ID để verify Google OAuth tokens
 GOOGLE_CLIENT_ID=188966214696-rj8bomspmvc8ocmrb4ss7s6n8dnu7p3m.apps.googleusercontent.com
 
+# Facebook OAuth Settings
+# App ID và App Secret để verify Facebook OAuth tokens
+# Lấy từ: https://developers.facebook.com/apps/
+FACEBOOK_APP_ID=your-facebook-app-id
+FACEBOOK_APP_SECRET=your-facebook-app-secret
+
 # Payment Development Mode
 # Bật chế độ development để test payment mà không tốn phí
 # Chỉ hoạt động khi DJANGO_DEBUG=True
 PAYMENT_DEV_MODE=True
+
+# Email Configuration - Gmail SMTP
+# QUAN TRỌNG: Phải cấu hình để gửi email thật!
+# Bước 1: Tạo App Password tại https://myaccount.google.com/security
+# Bước 2: Copy App Password 16 ký tự (không có khoảng trắng)
+# Bước 3: Điền vào EMAIL_HOST_USER và EMAIL_HOST_PASSWORD dưới đây
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+EMAIL_HOST_USER=tanhkhoa06@gmail.com
+EMAIL_HOST_PASSWORD=your-16-char-app-password-here
+DEFAULT_FROM_EMAIL=tanhkhoa06@gmail.com
+
+# Frontend URL (for email links)
+FRONTEND_URL=http://localhost:5173
+SITE_NAME=MORENT
+
+# Redis Configuration (for WebSocket/Channels)
+# Nếu không có Redis, set USE_IN_MEMORY_CHANNELS=True (chỉ dùng cho development)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+USE_IN_MEMORY_CHANNELS=False

@@ -51,11 +51,33 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        from django.utils.crypto import get_random_string
+        from django.utils import timezone
+        from users.models import UserProfile
+        
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data["email"],
             password=validated_data["password"],
         )
+        
+        # Tạo UserProfile và email verification token
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        verification_token = get_random_string(length=64)
+        profile.email_verification_token = verification_token
+        profile.email_verification_sent_at = timezone.now()
+        profile.save()
+        
+        # Gửi email verification
+        try:
+            from core.email_service import EmailService
+            EmailService.send_verification_email(user, verification_token)
+        except Exception as e:
+            # Log error nhưng không fail registration
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send verification email: {str(e)}")
+        
         return user
 
 
@@ -71,7 +93,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ["avatar_url"]
 
     def get_avatar_url(self, obj):
-        """Trả về URL đầy đủ của avatar"""
+        """Trả về URL đầy đủ của avatar
+        
+        Logic ưu tiên:
+        1. avatar_url (OAuth provider) - nếu có → dùng
+        2. avatar (ImageField) - nếu có → dùng
+        3. None - fallback
+        """
+        # Ưu tiên 1: Avatar URL từ OAuth provider
+        if obj.avatar_url:
+            return obj.avatar_url
+        
+        # Ưu tiên 2: Avatar từ file upload
         if obj.avatar:
             request = self.context.get("request")
             if request:
@@ -104,13 +137,25 @@ class UserSerializer(serializers.ModelSerializer):
             return "user"
 
     def get_avatar_url(self, obj):
-        """Trả về URL đầy đủ của avatar từ profile"""
+        """Trả về URL đầy đủ của avatar từ profile
+        
+        Logic ưu tiên:
+        1. avatar_url (OAuth provider: Facebook, Google, etc.) - nếu có → dùng
+        2. avatar (ImageField - file upload) - nếu có → dùng
+        3. None - fallback về avatar mặc định ở frontend
+        """
         try:
-            if hasattr(obj, "profile") and obj.profile.avatar:
-                request = self.context.get("request")
-                if request:
-                    return request.build_absolute_uri(obj.profile.avatar.url)
-                return obj.profile.avatar.url
+            if hasattr(obj, "profile") and obj.profile:
+                # Ưu tiên 1: Avatar URL từ OAuth provider
+                if obj.profile.avatar_url:
+                    return obj.profile.avatar_url
+                
+                # Ưu tiên 2: Avatar từ file upload
+                if obj.profile.avatar:
+                    request = self.context.get("request")
+                    if request:
+                        return request.build_absolute_uri(obj.profile.avatar.url)
+                    return obj.profile.avatar.url
         except Exception:
             pass
         return None

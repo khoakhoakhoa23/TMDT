@@ -113,14 +113,18 @@ class OrderViewSet(viewsets.ModelViewSet):
                         payment.paid_at = timezone.now()
                         payment.save()
                         
-                        # Tạo notification thanh toán thành công
+                        # Tạo notification và gửi email thanh toán thành công
                         try:
                             from core.notifications import create_payment_success_notification
                             create_payment_success_notification(instance, payment)
+                            
+                            # Gửi email thanh toán thành công
+                            from core.email_service import EmailService
+                            EmailService.send_payment_success_email(instance, payment)
                         except Exception as e:
                             import logging
                             logger = logging.getLogger(__name__)
-                            logger.warning(f"Không thể tạo payment notification: {str(e)}")
+                            logger.warning(f"Không thể tạo payment notification/email: {str(e)}")
                 except Exception as e:
                     # Log lỗi nhưng không fail update order
                     import logging
@@ -205,6 +209,15 @@ class OrderViewSet(viewsets.ModelViewSet):
             xe.so_luong -= qty
             xe.save()
 
+        # Gửi email xác nhận đơn hàng
+        try:
+            from core.email_service import EmailService
+            EmailService.send_order_confirmation_email(order)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Không thể gửi email xác nhận đơn hàng: {str(e)}")
+        
         serializer = self.get_serializer(order)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

@@ -231,9 +231,30 @@ class XeSerializer(serializers.ModelSerializer):
 
 class UserReviewSerializer(serializers.ModelSerializer):
     """Serializer cho user trong review"""
+    avatar_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "email"]
+        fields = ["id", "username", "first_name", "last_name", "email", "avatar_url"]
+        read_only_fields = ["avatar_url"]
+    
+    def get_avatar_url(self, obj):
+        """Trả về avatar URL từ profile"""
+        try:
+            if hasattr(obj, "profile") and obj.profile:
+                # Ưu tiên 1: Avatar URL từ OAuth provider
+                if obj.profile.avatar_url:
+                    return obj.profile.avatar_url
+                
+                # Ưu tiên 2: Avatar từ file upload
+                if obj.profile.avatar:
+                    request = self.context.get("request")
+                    if request:
+                        return request.build_absolute_uri(obj.profile.avatar.url)
+                    return obj.profile.avatar.url
+        except Exception:
+            pass
+        return None
 
 
 class ReviewSerializer(serializers.ModelSerializer):
