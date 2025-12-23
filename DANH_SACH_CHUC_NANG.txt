@@ -1,0 +1,385 @@
+================================================================================
+                    DANH SÁCH CHỨC NĂNG CỦA HỆ THỐNG
+                    Website Thuê Xe - TMDT (MORENT)
+================================================================================
+
+1. QUẢN LÝ NGƯỜI DÙNG VÀ XÁC THỰC
+   =================================
+   1.1. Đăng ký tài khoản
+       - Đăng ký với username, email, password
+       - Xác thực email qua email verification
+       - Gửi email xác thực tự động
+       - Resend email verification
+   
+   1.2. Đăng nhập
+       - Đăng nhập bằng username/email và password
+       - JWT Token authentication
+       - Refresh token tự động
+       - Remember me functionality
+   
+   1.3. OAuth Login (Đăng nhập bằng mạng xã hội)
+       - Đăng nhập bằng Google
+       - Đăng nhập bằng Facebook
+       - Tự động tạo tài khoản nếu chưa có
+   
+   1.4. Quên mật khẩu
+       - Yêu cầu reset password qua email
+       - Gửi link reset password
+       - Reset password với token
+   
+   1.5. Quản lý Profile
+       - Xem thông tin cá nhân
+       - Cập nhật thông tin (tên, email, số điện thoại)
+       - Upload avatar
+       - Đổi mật khẩu
+       - Xem lịch sử thuê xe
+
+
+2. QUẢN LÝ SẢN PHẨM (XE)
+   =======================
+   2.1. Xem danh sách xe
+       - Hiển thị tất cả xe có sẵn
+       - Phân trang (pagination)
+       - Sắp xếp theo nhiều tiêu chí
+   
+   2.2. Tìm kiếm xe
+       - Tìm kiếm theo tên xe
+       - Tìm kiếm theo loại xe
+       - Tìm kiếm theo từ khóa
+       - Search suggestions/autocomplete
+   
+   2.3. Lọc xe
+       - Lọc theo loại xe (SUV, Sedan, Hatchback, etc.)
+       - Lọc theo giá thuê (min - max)
+       - Lọc theo màu sắc
+       - Lọc theo loại nhiên liệu (Xăng, Điện, Hybrid)
+       - Lọc theo hộp số (Số sàn, Số tự động)
+       - Lọc theo số chỗ ngồi
+       - Lọc theo trạng thái (Còn hàng, Hết hàng)
+       - Kết hợp nhiều bộ lọc
+   
+   2.4. Xem chi tiết xe
+       - Thông tin đầy đủ về xe
+       - Hình ảnh xe (nhiều ảnh)
+       - Giá thuê, giá bán
+       - Thông tin kỹ thuật (dung tích, hộp số, số chỗ, nhiên liệu)
+       - Mô tả chi tiết
+       - Đánh giá và nhận xét từ khách hàng
+   
+   2.5. Quản lý loại xe (Admin)
+       - Thêm, sửa, xóa loại xe
+       - Quản lý danh mục xe
+   
+   2.6. Quản lý xe (Admin)
+       - Thêm xe mới
+       - Cập nhật thông tin xe
+       - Xóa xe
+       - Upload nhiều ảnh cho xe
+       - Quản lý số lượng tồn kho
+       - Quản lý trạng thái xe (Còn hàng/Hết hàng)
+       - SEO settings (title, description, keywords)
+
+
+3. ĐÁNH GIÁ VÀ NHẬN XÉT
+   ======================
+   3.1. Xem đánh giá
+       - Xem tất cả đánh giá của một xe
+       - Xem rating trung bình
+       - Lọc đánh giá theo rating (1-5 sao)
+   
+   3.2. Tạo đánh giá
+       - Đánh giá xe (1-5 sao)
+       - Viết nhận xét
+       - Mỗi user chỉ đánh giá 1 lần cho 1 xe
+       - Cập nhật đánh giá đã có
+   
+   3.3. Quản lý đánh giá (Admin)
+       - Xem tất cả đánh giá
+       - Xóa đánh giá không phù hợp
+
+
+4. GIỎ HÀNG (SHOPPING CART)
+   =========================
+   4.1. Thêm xe vào giỏ hàng
+       - Chọn xe muốn thuê
+       - Chọn số lượng
+       - Chọn ngày bắt đầu và kết thúc thuê
+       - Chọn địa điểm nhận/trả xe
+   
+   4.2. Quản lý giỏ hàng
+       - Xem giỏ hàng
+       - Cập nhật số lượng
+       - Xóa xe khỏi giỏ hàng
+       - Tính tổng tiền tự động
+   
+   4.3. Wishlist (Danh sách yêu thích)
+       - Thêm/xóa xe khỏi wishlist
+       - Xem danh sách xe yêu thích
+       - Quick add to cart từ wishlist
+
+
+5. ĐẶT HÀNG VÀ THANH TOÁN
+   ========================
+   5.1. Đặt hàng
+       - Checkout từ giỏ hàng
+       - Nhập thông tin giao hàng
+       - Xác nhận đơn hàng
+       - Tạo order với trạng thái "pending"
+   
+   5.2. Thanh toán
+       - Thanh toán bằng MoMo
+       - Thanh toán bằng ZaloPay
+       - Thanh toán bằng VNPay
+       - QR Code payment
+       - Payment callback xử lý tự động
+       - Development mode (auto approve - không tốn phí)
+   
+   5.3. Quản lý đơn hàng
+       - Xem lịch sử đơn hàng
+       - Xem chi tiết đơn hàng
+       - Theo dõi trạng thái đơn hàng
+       - Hủy đơn hàng (nếu chưa thanh toán)
+       - Trạng thái: Chờ xử lý, Đang xử lý, Đã thanh toán, Đang giao, Hoàn thành, Đã hủy
+
+
+6. QUẢN LÝ ĐỊA ĐIỂM
+   =================
+   6.1. Xem danh sách địa điểm
+       - Hiển thị các địa điểm nhận/trả xe
+       - Thông tin địa chỉ chi tiết
+   
+   6.2. Quản lý địa điểm (Admin)
+       - Thêm địa điểm mới
+       - Cập nhật thông tin địa điểm
+       - Xóa/Ẩn địa điểm
+       - Kích hoạt/Vô hiệu hóa địa điểm
+
+
+7. BLOG VÀ TIN TỨC
+   ================
+   7.1. Xem blog posts
+       - Danh sách bài viết
+       - Xem chi tiết bài viết
+       - SEO optimized
+   
+   7.2. Quản lý blog (Admin)
+       - Tạo bài viết mới
+       - Cập nhật bài viết
+       - Xóa bài viết
+       - Publish/Unpublish
+
+
+8. THÔNG BÁO (NOTIFICATIONS)
+   ==========================
+   8.1. Real-time notifications
+       - WebSocket notifications
+       - Thông báo đơn hàng mới
+       - Thông báo thanh toán thành công
+       - Thông báo đơn hàng được cập nhật
+       - Thông báo đánh giá mới
+   
+   8.2. Email notifications
+       - Email xác thực tài khoản
+       - Email reset password
+       - Email xác nhận đơn hàng
+       - Email thanh toán thành công
+       - Email cập nhật trạng thái đơn hàng
+   
+   8.3. Quản lý thông báo
+       - Xem tất cả thông báo
+       - Đánh dấu đã đọc
+       - Xóa thông báo
+       - Badge số lượng thông báo chưa đọc
+
+
+9. ADMIN DASHBOARD
+   ================
+   9.1. Dashboard tổng quan
+       - Thống kê doanh thu hôm nay
+       - Thống kê doanh thu theo tháng
+       - Tổng số xe đã bán
+       - Top xe bán chạy
+       - Biểu đồ thống kê
+       - Số lượng đơn hàng mới
+   
+   9.2. Quản lý sản phẩm
+       - CRUD operations cho xe
+       - CRUD operations cho loại xe
+       - Upload và quản lý ảnh xe
+       - Quản lý tồn kho
+   
+   9.3. Quản lý đơn hàng
+       - Xem tất cả đơn hàng
+       - Cập nhật trạng thái đơn hàng
+       - Xem chi tiết đơn hàng
+       - Lọc đơn hàng theo trạng thái
+       - Export đơn hàng
+   
+   9.4. Quản lý người dùng
+       - Xem danh sách users
+       - Phân quyền (Admin, Staff, Customer)
+       - Khóa/Mở khóa tài khoản
+       - Xem thông tin chi tiết user
+   
+   9.5. Quản lý hóa đơn
+       - Hóa đơn nhập (từ nhà cung cấp)
+       - Hóa đơn xuất (cho khách hàng)
+       - Chi tiết hóa đơn
+       - Quản lý bảo hành
+   
+   9.6. Analytics & Reports
+       - Báo cáo doanh thu
+       - Báo cáo sản phẩm bán chạy
+       - Thống kê người dùng
+       - Export reports
+
+
+10. GIAO DIỆN VÀ TRẢI NGHIỆM NGƯỜI DÙNG
+    ====================================
+    10.1. Responsive Design
+        - Tối ưu cho mobile
+        - Tối ưu cho tablet
+        - Tối ưu cho desktop
+        - Adaptive layout
+    
+    10.2. Dark Mode
+        - Chuyển đổi dark/light mode
+        - Lưu preference của user
+        - Smooth transitions
+    
+    10.3. UI Components
+        - Header với search bar
+        - Navigation menu
+        - Footer với thông tin liên hệ
+        - Car cards với hình ảnh
+        - Filter sidebar
+        - Modal dialogs
+        - Forms với validation
+        - Loading states
+        - Error handling
+    
+    10.4. User Experience
+        - Smooth page transitions
+        - Loading indicators
+        - Error messages
+        - Success notifications
+        - Form validation
+        - Auto-save preferences
+
+
+11. API VÀ BACKEND
+    ===============
+    11.1. RESTful API
+        - REST API endpoints
+        - API documentation (Swagger/OpenAPI)
+        - API versioning
+        - Rate limiting
+        - CORS configuration
+    
+    11.2. Authentication & Authorization
+        - JWT tokens
+        - Token refresh
+        - Permission-based access control
+        - Role-based access control (Admin, Staff, User)
+    
+    11.3. Database
+        - PostgreSQL database
+        - Database migrations
+        - Data models
+        - Relationships (Foreign keys, Many-to-many)
+    
+    11.4. File Upload
+        - Upload ảnh xe
+        - Upload avatar user
+        - Image optimization
+        - Media file management
+
+
+12. BẢO MẬT
+    ========
+    12.1. Security Features
+        - Password hashing (Django default)
+        - CSRF protection
+        - XSS protection
+        - SQL injection prevention
+        - Secure headers
+        - HTTPS support
+    
+    12.2. Data Protection
+        - Input validation
+        - Output sanitization
+        - Secure file uploads
+        - Environment variables for secrets
+
+
+13. TÍNH NĂNG BỔ SUNG
+    ==================
+    13.1. SEO Optimization
+        - SEO-friendly URLs
+        - Meta tags
+        - Sitemap
+        - Structured data
+    
+    13.2. Performance
+        - Image lazy loading
+        - Code splitting
+        - Caching strategies
+        - Database query optimization
+    
+    13.3. Testing
+        - Unit tests (Backend)
+        - Component tests (Frontend)
+        - API tests
+        - Integration tests
+
+
+14. QUẢN LÝ NHÀ CUNG CẤP (NCC)
+    ===========================
+    14.1. Quản lý NCC (Admin)
+        - Thêm, sửa, xóa nhà cung cấp
+        - Quản lý hóa đơn nhập từ NCC
+        - Chi tiết hóa đơn nhập
+
+
+15. QUẢN LÝ NHÂN VIÊN
+    ===================
+    15.1. Quản lý nhân viên (Admin)
+        - Thêm, sửa, xóa nhân viên
+        - Phân quyền nhân viên
+        - Quản lý hóa đơn của nhân viên
+
+
+16. QUẢN LÝ KHÁCH HÀNG
+    ===================
+    16.1. Quản lý khách hàng (Admin)
+        - Xem danh sách khách hàng
+        - Xem lịch sử đơn hàng của khách hàng
+        - Quản lý bảo hành cho khách hàng
+
+
+================================================================================
+                            TỔNG KẾT
+================================================================================
+
+Tổng số chức năng chính: 16 nhóm
+Tổng số chức năng chi tiết: 80+ tính năng
+
+Công nghệ sử dụng:
+- Frontend: React, Vite, Tailwind CSS
+- Backend: Django REST Framework
+- Database: PostgreSQL
+- Authentication: JWT + OAuth
+- Payment: MoMo, ZaloPay, VNPay
+- Real-time: WebSocket (Django Channels)
+- Email: Gmail SMTP
+
+Đối tượng sử dụng:
+- Khách hàng: Xem xe, đặt hàng, thanh toán, quản lý đơn hàng
+- Admin: Quản lý toàn bộ hệ thống, sản phẩm, đơn hàng, users
+- Staff: Hỗ trợ quản lý đơn hàng và khách hàng
+
+================================================================================
+Ngày tạo: 2025
+Phiên bản: 1.0
+================================================================================
+
