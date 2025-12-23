@@ -52,8 +52,8 @@ class XeViewSet(viewsets.ModelViewSet):
     serializer_class = XeSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["ten_xe", "mau_sac", "loai_xe__ten_loai", "seo_keywords", "mo_ta_ngan", "mo_ta"]
-    ordering_fields = ["gia", "gia_thue", "so_luong", "created_at", "ten_xe"]
-    ordering = ["-created_at"]  # Default ordering
+    ordering_fields = ["gia", "gia_thue", "so_luong", "ten_xe", "ma_xe"]
+    ordering = ["ma_xe"]  # Default ordering - sử dụng ma_xe thay vì created_at
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
