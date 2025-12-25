@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import userApi from "../../api/userApi";
+import AddLocationModal from "../../components/AddLocationModal";
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -19,6 +20,7 @@ const UsersPage = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -205,6 +207,16 @@ const UsersPage = () => {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Người dùng</h1>
         <div className="flex items-center space-x-4">
           <span className="text-gray-600 dark:text-gray-400 transition-colors duration-300">{users.length} người</span>
+          <button
+            onClick={() => setShowAddLocationModal(true)}
+            className="bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors duration-300 flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>Thêm địa điểm đón nhận - trả xe</span>
+          </button>
           <button
             onClick={() => handleOpenModal()}
             className="bg-blue-600 dark:bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 flex items-center space-x-2"
@@ -505,6 +517,15 @@ const UsersPage = () => {
           </div>
         </div>
       )}
+
+      {/* Add Location Modal */}
+      <AddLocationModal
+        isOpen={showAddLocationModal}
+        onClose={() => setShowAddLocationModal(false)}
+        onSuccess={() => {
+          console.log("Location added successfully");
+        }}
+      />
     </div>
   );
 };

@@ -24,6 +24,10 @@ class LocationViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [AllowAny()]
+        elif self.action == "create":
+            # Cho phép user đã đăng nhập tạo địa điểm mới
+            return [IsAuthenticated()]
+        # Chỉ admin mới có thể update/delete
         return [IsAdminUser()]
 
 

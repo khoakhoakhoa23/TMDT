@@ -6,6 +6,14 @@ from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostVi
 from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout
+from orders.api_views import (
+    check_schedule_conflict_api,
+    calculate_price_api,
+    validate_coupon_api,
+    geocode_address_api,
+    calculate_distance_api,
+    calculate_distance_from_addresses_api,
+)
 from payments.views import PaymentViewSet, payment_callback
 from core.views import NotificationViewSet
 from analytics.views import doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay
@@ -54,4 +62,8 @@ urlpatterns = [
     path("thongke/doanhthu/<int:year>/<int:month>/", doanh_thu_thang),
     path("thongke/tong-xe-da-ban/", tong_xe_da_ban),
     path("thongke/top-xe-ban-chay/", top_xe_ban_chay),
+    # Maps & Geocoding APIs (proxy để tránh CORS)
+    path("maps/geocode/", geocode_address_api, name="geocode_address"),
+    path("maps/distance/", calculate_distance_api, name="calculate_distance"),
+    path("maps/distance-from-addresses/", calculate_distance_from_addresses_api, name="distance_from_addresses"),
 ]

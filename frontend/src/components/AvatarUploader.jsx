@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
-const AvatarUploader = ({ currentAvatar, onUpload, className = "" }) => {
+const AvatarUploader = ({ currentAvatar, onUpload, className = "", userName = "" }) => {
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [imageError, setImageError] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -71,9 +72,14 @@ const AvatarUploader = ({ currentAvatar, onUpload, className = "" }) => {
     fileInputRef.current?.click();
   };
 
+  // Reset imageError when avatar changes
+  useEffect(() => {
+    setImageError(false);
+  }, [currentAvatar, preview]);
+
   const getAvatarUrl = () => {
     if (preview) return preview;
-    if (currentAvatar) return currentAvatar;
+    if (currentAvatar && currentAvatar.trim() !== "") return currentAvatar;
     return null;
   };
 
@@ -86,6 +92,9 @@ const AvatarUploader = ({ currentAvatar, onUpload, className = "" }) => {
     return name.charAt(0).toUpperCase();
   };
 
+  const avatarUrl = getAvatarUrl();
+  const showImage = avatarUrl && !imageError;
+
   return (
     <div className={`relative ${className}`}>
       <input
@@ -96,30 +105,27 @@ const AvatarUploader = ({ currentAvatar, onUpload, className = "" }) => {
         className="hidden"
       />
 
-      <div className="relative inline-block">
+      <div className="relative inline-block w-full h-full">
         {/* Avatar Display */}
         <div
           onClick={handleClick}
-          className="cursor-pointer relative group"
+          className="cursor-pointer relative group w-full h-full aspect-square"
         >
-          {getAvatarUrl() ? (
+          {showImage ? (
             <img
-              src={getAvatarUrl()}
+              key={avatarUrl}
+              src={avatarUrl}
               alt="Avatar"
               className="w-full h-full object-cover rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-blue-500 dark:group-hover:border-blue-400 transition-colors duration-300"
-              onError={(e) => {
-                e.target.style.display = "none";
-                e.target.nextElementSibling.style.display = "flex";
+              onError={() => {
+                setImageError(true);
               }}
             />
-          ) : null}
-          <div
-            className={`w-full h-full rounded-full flex items-center justify-center text-white text-2xl font-bold bg-gradient-to-br from-blue-500 to-blue-600 ${
-              getAvatarUrl() ? "hidden" : ""
-            }`}
-          >
-            {getInitials("User")}
-          </div>
+          ) : (
+            <div className="w-full h-full rounded-full flex items-center justify-center text-white text-2xl font-bold bg-gradient-to-br from-blue-500 to-blue-600">
+              {getInitials(userName)}
+            </div>
+          )}
 
           {/* Upload Overlay */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center transition-all">

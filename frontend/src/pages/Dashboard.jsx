@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 import orderApi from "../api/orderApi";
 import carApi from "../api/carApi";
+import MapView from "../components/MapView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -323,6 +324,24 @@ const Dashboard = () => {
           {!displayOrder && (
             <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
               <p>Chưa có đơn hàng nào</p>
+            </div>
+          )}
+
+          {/* Map View - Chỉ hiển thị khi order đã thành công */}
+          {displayOrder && 
+           displayOrder.pickup_location && 
+           displayOrder.return_location &&
+           (displayOrder.status === "paid" || 
+            displayOrder.status === "completed" || 
+            displayOrder.payment_status === "paid") && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+                Bản đồ tuyến đường
+              </h3>
+              <MapView
+                pickupLocation={displayOrder.pickup_location}
+                returnLocation={displayOrder.return_location}
+              />
             </div>
           )}
 

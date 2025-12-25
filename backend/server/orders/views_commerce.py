@@ -201,6 +201,13 @@ class OrderViewSet(viewsets.ModelViewSet):
             pickup_location=request.data.get("pickup_location", ""),
             return_location=request.data.get("return_location", ""),
             rental_days=request.data.get("rental_days", 1),
+            rental_hours=request.data.get("rental_hours", 0),
+            base_price=request.data.get("base_price", 0),
+            delivery_fee=request.data.get("delivery_fee", 0),
+            pickup_fee=request.data.get("pickup_fee", 0),
+            additional_fee=request.data.get("additional_fee", 0),
+            discount_amount=request.data.get("discount_amount", 0),
+            late_fee=request.data.get("late_fee", 0),
         )
         for xe, qty, price in order_items:
             OrderItem.objects.create(
@@ -243,6 +250,13 @@ def _checkout_transaction(cart):
         shipping_address="",
         shipping_city="",
         payment_method="",
+        base_price=0,
+        delivery_fee=0,
+        pickup_fee=0,
+        additional_fee=0,
+        discount_amount=0,
+        late_fee=0,
+        rental_hours=0,
     )
     for item in items:
         xe = item.xe
