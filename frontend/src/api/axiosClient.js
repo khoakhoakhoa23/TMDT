@@ -89,7 +89,7 @@ axiosClient.interceptors.response.use(
 
         return axiosClient(originalRequest);
       } catch (refreshError) {
-        // Refresh token hết hạn hoặc lỗi. Nếu là request public, thử lại không token.
+        // Refresh token hết hạn hoặc lỗi. Xóa tokens
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
 
@@ -99,8 +99,6 @@ axiosClient.interceptors.response.use(
         }
 
         // Với request cần bảo vệ, redirect về login
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }

@@ -16,6 +16,19 @@ const statsApi = {
   getTopSellingCars() {
     return axiosClient.get("thongke/top-xe-ban-chay/");
   },
+
+  // Coupon Analytics
+  getCouponAnalytics() {
+    return axiosClient.get("thongke/coupon-analytics/");
+  },
+
+  getCouponUsageOverTime() {
+    return axiosClient.get("thongke/coupon-usage-over-time/");
+  },
+
+  getCouponPerformance() {
+    return axiosClient.get("thongke/coupon-performance/");
+  },
 };
 
 export default statsApi;

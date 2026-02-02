@@ -15,23 +15,19 @@ const WishlistPanel = ({ isOpen, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]); // Chỉ fetch khi isOpen thay đổi
 
-  // Lắng nghe sự kiện thay đổi wishlist từ localStorage
+  // Lắng nghe sự kiện thay đổi wishlist (từ custom event khi add/remove)
   useEffect(() => {
     if (!isOpen) return; // Chỉ lắng nghe khi panel mở
     
-    const handleStorageChange = () => {
+    const handleWishlistChange = () => {
       fetchWishlist();
     };
 
-    // Lắng nghe sự kiện storage từ các tab khác
-    window.addEventListener("storage", handleStorageChange);
-    
     // Custom event để lắng nghe từ cùng tab
-    window.addEventListener("wishlistUpdated", handleStorageChange);
+    window.addEventListener("wishlistUpdated", handleWishlistChange);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("wishlistUpdated", handleStorageChange);
+      window.removeEventListener("wishlistUpdated", handleWishlistChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]); // Chỉ setup listener khi isOpen thay đổi
@@ -60,20 +56,15 @@ const WishlistPanel = ({ isOpen, onClose }) => {
     try {
       setLoading(true);
       const response = await wishlistApi.getAll();
+      // API trả về format: { results: [...], count, next, previous } hoặc array trực tiếp
       const data = response.data.results || response.data || [];
-      // Đảm bảo mỗi item có cấu trúc đúng: { id, car, added_at }
-      const formattedData = data.map(item => {
-        // Nếu item đã có cấu trúc đúng (có car property)
-        if (item.car) {
-          return item;
-        }
-        // Nếu item là car object trực tiếp, wrap nó
-        return {
-          id: item.id || Date.now(),
-          car: item,
-          added_at: item.added_at || new Date().toISOString(),
-        };
-      });
+      // API trả về format: { id, car, added_at, created_at, ... }
+      // car đã được serialize từ xe field
+      const formattedData = data.map(item => ({
+        id: item.id,
+        car: item.car || item.xe || item, // car từ serializer hoặc xe từ model
+        added_at: item.added_at || item.created_at,
+      }));
       setWishlistItems(formattedData);
     } catch (error) {
       console.error("Error fetching wishlist:", error);
@@ -87,10 +78,13 @@ const WishlistPanel = ({ isOpen, onClose }) => {
     try {
       await wishlistApi.remove(itemId);
       setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
+      // Dispatch event để các component khác biết wishlist đã thay đổi
+      window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (error) {
       console.error("Error removing from wishlist:", error);
       // Update locally even if API fails
       setWishlistItems((prev) => prev.filter((item) => item.id !== itemId));
+      window.dispatchEvent(new Event("wishlistUpdated"));
     }
   };
 

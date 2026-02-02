@@ -199,6 +199,27 @@ class Order(models.Model):
     # Giữ chỗ
     reserved_until = models.DateTimeField(null=True, blank=True, help_text="Thời hạn giữ chỗ (timeout)")
 
+    def check_reservation_expired(self):
+        """Kiểm tra và xử lý order hết hạn giữ chỗ"""
+        from django.utils import timezone
+
+        if not self.reserved_until or self.status != "reserved":
+            return False
+
+        now = timezone.now()
+        if now > self.reserved_until:
+            # Chuyển status thành expired
+            self.status = "expired"
+            self.save()
+
+            # Hoàn lại số lượng xe
+            for item in self.items.all():
+                item.xe.so_luong += item.quantity
+                item.xe.save()
+
+            return True
+        return False
+
     def __str__(self):
         return f"Order #{self.id} - {self.user.username}"
 

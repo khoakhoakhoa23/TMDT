@@ -96,19 +96,9 @@ const CarCard = ({ car, navigateTo = "category" }) => {
             e.stopPropagation();
             try {
               if (isFavorite) {
-                // Xóa khỏi wishlist
-                const wishlistData = localStorage.getItem("wishlist");
-                if (wishlistData) {
-                  const items = JSON.parse(wishlistData);
-                  const carId = car.ma_xe || car.id;
-                  const itemToRemove = items.find(item => {
-                    const itemCarId = item.car?.ma_xe || item.car?.id || item.ma_xe || item.id;
-                    return itemCarId === carId;
-                  });
-                  if (itemToRemove) {
-                    await wishlistApi.remove(itemToRemove.id);
-                  }
-                }
+                // Xóa khỏi wishlist bằng car_id
+                const carId = car.ma_xe || car.id;
+                await wishlistApi.removeByCarId(carId);
                 setIsFavorite(false);
               } else {
                 // Thêm vào wishlist
@@ -117,6 +107,11 @@ const CarCard = ({ car, navigateTo = "category" }) => {
               }
             } catch (error) {
               console.error("Error toggling wishlist:", error);
+              // Nếu lỗi, vẫn cập nhật UI để user biết
+              if (error.response?.status === 400 && error.response?.data?.detail?.includes("đã có")) {
+                // Xe đã có trong wishlist, set favorite = true
+                setIsFavorite(true);
+              }
             }
           }}
           className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md dark:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 z-10 border border-gray-200 dark:border-gray-700"

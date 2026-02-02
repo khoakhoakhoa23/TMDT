@@ -7,8 +7,6 @@ export default function XeList() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
     
     axiosClient
       .get("xe/")

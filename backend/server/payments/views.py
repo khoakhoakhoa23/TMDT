@@ -63,7 +63,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 return_url=return_url,
                 ipn_url=ipn_url
             )
-            
+
             # Tạo payment request
             gateway_response = gateway.create_payment()
             
@@ -100,21 +100,26 @@ class PaymentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="ipn", permission_classes=[AllowAny])
     def ipn_callback(self, request, pk=None):
         """IPN callback từ payment gateway"""
-        payment = self.get_object()
-        
-        try:
-            # Lấy payment gateway
-            gateway = get_payment_gateway(
-                payment_method=payment.payment_method,
-                order=payment.order,
-                amount=payment.amount
-            )
+        with transaction.atomic():
+            # Use select_for_update to prevent race condition
+            payment = Payment.objects.select_for_update().get(pk=pk)
             
-            # Verify payment
-            verify_result = gateway.verify_payment(request.data)
+            # Idempotency check: if payment is already completed, return success without processing again
+            if payment.status == "completed":
+                return Response({"RspCode": "00", "Message": "Success - Already processed"})
             
-            if verify_result.get("success"):
-                with transaction.atomic():
+            try:
+                # Lấy payment gateway
+                gateway = get_payment_gateway(
+                    payment_method=payment.payment_method,
+                    order=payment.order,
+                    amount=payment.amount
+                )
+                
+                # Verify payment
+                verify_result = gateway.verify_payment(request.data)
+                
+                if verify_result.get("success"):
                     payment.status = "completed"
                     payment.paid_at = timezone.now()
                     payment.callback_data = request.data
@@ -137,19 +142,19 @@ class PaymentViewSet(viewsets.ModelViewSet):
                         import logging
                         logger = logging.getLogger(__name__)
                         logger.warning(f"Không thể tạo payment notification/email: {str(e)}")
-                
-                return Response({"RspCode": "00", "Message": "Success"})
-            else:
+                    
+                    return Response({"RspCode": "00", "Message": "Success"})
+                else:
+                    payment.status = "failed"
+                    payment.callback_data = request.data
+                    payment.save()
+                    return Response({"RspCode": "07", "Message": "Failed"})
+                    
+            except Exception as e:
                 payment.status = "failed"
-                payment.callback_data = request.data
+                payment.callback_data = {"error": str(e)}
                 payment.save()
-                return Response({"RspCode": "07", "Message": "Failed"})
-                
-        except Exception as e:
-            payment.status = "failed"
-            payment.callback_data = {"error": str(e)}
-            payment.save()
-            return Response({"RspCode": "99", "Message": str(e)})
+                return Response({"RspCode": "99", "Message": str(e)})
     
     @action(detail=True, methods=["get"], url_path="status")
     def check_status(self, request, pk=None):
@@ -222,10 +227,30 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@transaction.atomic
 def payment_callback(request, order_id):
     """Callback URL cho payment gateway"""
     try:
-        payment = Payment.objects.get(order_id=order_id)
+        # Use select_for_update to prevent race condition if callback is called multiple times
+        # Get the most recent pending/processing payment for this order
+        # (in case there are multiple payments, which shouldn't happen but could due to edge cases)
+        payment = Payment.objects.select_for_update().filter(
+            order_id=order_id,
+            status__in=["pending", "processing"]
+        ).order_by("-created_at").first()
+        
+        if not payment:
+            # Try to get any payment for this order (might be completed)
+            payment = Payment.objects.filter(order_id=order_id).order_by("-created_at").first()
+            if not payment:
+                return Response(
+                    {"detail": "Payment not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Idempotency check: if payment is already completed, return success without processing again
+        if payment.status == "completed":
+            return Response({"success": True, "message": "Payment already processed"})
         
         # Verify và cập nhật payment
         gateway = get_payment_gateway(
@@ -245,6 +270,18 @@ def payment_callback(request, order_id):
             payment.order.payment_status = "paid"
             payment.order.status = "paid"
             payment.order.save()
+            
+            # Tạo notification và gửi email thanh toán thành công
+            try:
+                from core.notifications import create_payment_success_notification
+                create_payment_success_notification(payment.order, payment)
+                
+                from core.email_service import EmailService
+                EmailService.send_payment_success_email(payment.order, payment)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Không thể tạo payment notification/email: {str(e)}")
         
         return Response({"success": True})
         
@@ -252,4 +289,12 @@ def payment_callback(request, order_id):
         return Response(
             {"detail": "Payment not found"},
             status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Payment callback error: {str(e)}", exc_info=True)
+        return Response(
+            {"detail": "Internal server error"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

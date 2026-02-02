@@ -5,9 +5,10 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from orders.models import Cart, CartItem, Order, OrderItem
+from orders.models import Cart, CartItem, Order, OrderItem, Coupon
 from products.models import Xe
 from orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
+from decimal import Decimal
 
 
 def _get_session_key(request):
@@ -87,10 +88,22 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         # Lấy status mới từ request data
         new_status = request.data.get('status', instance.status)
-        
+
         # Lưu status cũ để tạo notification
         old_status = instance.status
+
+        # Kiểm tra xem có cập nhật actual_return_date/time không
+        return_date_updated = 'actual_return_date' in request.data or 'actual_return_time' in request.data
         
+        # Tính late fee nếu cập nhật return date/time
+        if return_date_updated and (instance.actual_return_date or instance.actual_return_time):
+            from orders.utils import calculate_late_fee
+            new_late_fee = calculate_late_fee(instance)
+            if new_late_fee != instance.late_fee:
+                instance.late_fee = new_late_fee
+                instance.total_price = instance.base_price + instance.delivery_fee + instance.pickup_fee + instance.additional_fee - instance.discount_amount + new_late_fee
+                instance.save()
+
         # Nếu status được set thành "paid", tự động cập nhật payment_status và payment
         if new_status == "paid" and instance.status != "paid":
             with transaction.atomic():
@@ -160,7 +173,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if not isinstance(items_data, list) or len(items_data) == 0:
             return Response({"detail": "items trống."}, status=status.HTTP_400_BAD_REQUEST)
 
-        total = 0
+        subtotal = Decimal(0)
         order_items = []
 
         for item in items_data:
@@ -172,7 +185,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             try:
-                xe = Xe.objects.get(pk=xe_id)
+                # Use select_for_update to prevent race condition
+                xe = Xe.objects.select_for_update().get(pk=xe_id)
             except Xe.DoesNotExist:
                 return Response({"detail": f"Xe {xe_id} không tồn tại."}, status=404)
 
@@ -184,12 +198,63 @@ class OrderViewSet(viewsets.ModelViewSet):
 
             # Ưu tiên gia_thue cho thuê xe, sau đó gia_khuyen_mai, cuối cùng là gia
             price = xe.gia_thue if xe.gia_thue else (xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia)
-            total += price * quantity
+            subtotal += Decimal(str(price)) * quantity
             order_items.append((xe, quantity, price))
+
+        # Xử lý coupon
+        coupon_code = request.data.get("coupon_code", "").strip()
+        coupon = None
+        discount_amount = Decimal(0)
+        
+        # Nếu có base_price từ frontend (từ calculate_price_api), dùng nó
+        base_price_from_request = request.data.get("base_price")
+        if base_price_from_request:
+            subtotal = Decimal(str(base_price_from_request))
+            # Cộng thêm delivery_fee, pickup_fee, additional_fee nếu có
+            delivery_fee = Decimal(str(request.data.get("delivery_fee", 0)))
+            pickup_fee = Decimal(str(request.data.get("pickup_fee", 0)))
+            additional_fee = Decimal(str(request.data.get("additional_fee", 0)))
+            subtotal = subtotal + delivery_fee + pickup_fee + additional_fee
+        else:
+            # Nếu không có, tính từ items
+            delivery_fee = Decimal(str(request.data.get("delivery_fee", 0)))
+            pickup_fee = Decimal(str(request.data.get("pickup_fee", 0)))
+            additional_fee = Decimal(str(request.data.get("additional_fee", 0)))
+            subtotal = subtotal + delivery_fee + pickup_fee + additional_fee
+        
+        if coupon_code:
+            try:
+                # Use select_for_update to prevent race condition with coupon usage
+                coupon = Coupon.objects.select_for_update().get(code=coupon_code.upper())
+                if not coupon.is_valid():
+                    return Response(
+                        {"detail": "Mã coupon không hợp lệ hoặc đã hết hạn."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                if subtotal < coupon.min_order_value:
+                    return Response(
+                        {"detail": f"Đơn hàng tối thiểu {coupon.min_order_value:,.0f} VNĐ để sử dụng coupon này."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                # Double-check usage limit after locking
+                if coupon.usage_limit and coupon.used_count >= coupon.usage_limit:
+                    return Response(
+                        {"detail": "Mã coupon đã hết số lần sử dụng."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                discount_amount = coupon.calculate_discount(subtotal)
+                # Note: used_count will be incremented after successful order creation
+            except Coupon.DoesNotExist:
+                return Response(
+                    {"detail": "Mã coupon không tồn tại."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        total_price = subtotal - discount_amount
 
         order = Order.objects.create(
             user=user,
-            total_price=total,
+            total_price=total_price,
             status="pending",
             shipping_name=request.data.get("shipping_name", ""),
             shipping_phone=request.data.get("shipping_phone", ""),
@@ -202,19 +267,33 @@ class OrderViewSet(viewsets.ModelViewSet):
             return_location=request.data.get("return_location", ""),
             rental_days=request.data.get("rental_days", 1),
             rental_hours=request.data.get("rental_hours", 0),
-            base_price=request.data.get("base_price", 0),
-            delivery_fee=request.data.get("delivery_fee", 0),
-            pickup_fee=request.data.get("pickup_fee", 0),
-            additional_fee=request.data.get("additional_fee", 0),
-            discount_amount=request.data.get("discount_amount", 0),
+            base_price=subtotal - delivery_fee - pickup_fee - additional_fee,
+            delivery_fee=delivery_fee,
+            pickup_fee=pickup_fee,
+            additional_fee=additional_fee,
+            discount_amount=discount_amount,
             late_fee=request.data.get("late_fee", 0),
+            coupon_code=coupon_code.upper() if coupon_code else "",
+            coupon=coupon,
         )
         for xe, qty, price in order_items:
             OrderItem.objects.create(
                 order=order, xe=xe, quantity=qty, price_at_purchase=price
             )
+            # Double-check inventory before decrementing (xe is already locked from select_for_update above)
+            if xe.so_luong < qty:
+                # Rollback transaction by raising exception
+                raise ValueError(f"Xe '{xe.ten_xe}' chỉ còn {xe.so_luong} chiếc, không đủ để đặt {qty} chiếc.")
             xe.so_luong -= qty
+            # Ensure inventory doesn't go negative
+            if xe.so_luong < 0:
+                xe.so_luong = 0
             xe.save()
+
+        # Increment coupon used_count only after successful order creation
+        if coupon:
+            coupon.used_count += 1
+            coupon.save()
 
         # Gửi email xác nhận đơn hàng
         try:
@@ -230,43 +309,84 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 @transaction.atomic
-def _checkout_transaction(cart):
+def _checkout_transaction(cart, coupon_code=None):
+    # Lock all Xe objects to prevent race conditions
+    xe_ids = [item.xe_id for item in cart.items.select_related("xe")]
+    locked_xes = {xe.pk: xe for xe in Xe.objects.select_for_update().filter(pk__in=xe_ids)}
+    
     items = list(cart.items.select_related("xe"))
-    total = 0
+    subtotal = Decimal(0)
     for item in items:
-        xe = item.xe
+        xe = locked_xes[item.xe_id]
         if xe.so_luong < item.quantity:
             return None, {"detail": f"Xe '{xe.ten_xe}' chỉ còn {xe.so_luong} chiếc."}
         # Ưu tiên gia_thue cho thuê xe, sau đó gia_khuyen_mai, cuối cùng là gia
         price = xe.gia_thue if xe.gia_thue else (xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia)
-        total += price * item.quantity
+        subtotal += Decimal(str(price)) * item.quantity
+
+    # Xử lý coupon
+    coupon = None
+    discount_amount = Decimal(0)
+    if coupon_code:
+        try:
+            # Use select_for_update to prevent race condition with coupon usage
+            coupon = Coupon.objects.select_for_update().get(code=coupon_code.upper())
+            if not coupon.is_valid():
+                return None, {"detail": "Mã coupon không hợp lệ hoặc đã hết hạn."}
+            if subtotal < coupon.min_order_value:
+                return None, {
+                    "detail": f"Đơn hàng tối thiểu {coupon.min_order_value:,.0f} VNĐ để sử dụng coupon này."
+                }
+            # Double-check usage limit after locking
+            if coupon.usage_limit and coupon.used_count >= coupon.usage_limit:
+                return None, {"detail": "Mã coupon đã hết số lần sử dụng."}
+            discount_amount = coupon.calculate_discount(subtotal)
+            # Note: used_count will be incremented after successful order creation
+        except Coupon.DoesNotExist:
+            return None, {"detail": "Mã coupon không tồn tại."}
+    
+    total_price = subtotal - discount_amount
 
     order = Order.objects.create(
         user=cart.user,
-        total_price=total,
+        total_price=total_price,
         status="pending",
         shipping_name="",
         shipping_phone="",
         shipping_address="",
         shipping_city="",
         payment_method="",
-        base_price=0,
+        base_price=subtotal,
         delivery_fee=0,
         pickup_fee=0,
         additional_fee=0,
-        discount_amount=0,
+        discount_amount=discount_amount,
         late_fee=0,
         rental_hours=0,
+        coupon_code=coupon_code.upper() if coupon_code else "",
+        coupon=coupon,
     )
     for item in items:
-        xe = item.xe
+        xe = locked_xes[item.xe_id]
         # Ưu tiên gia_thue cho thuê xe, sau đó gia_khuyen_mai, cuối cùng là gia
         price = xe.gia_thue if xe.gia_thue else (xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia)
         OrderItem.objects.create(
             order=order, xe=xe, quantity=item.quantity, price_at_purchase=price
         )
+        # Double-check inventory before decrementing (xe is already locked with select_for_update)
+        if xe.so_luong < item.quantity:
+            raise ValueError(f"Xe '{xe.ten_xe}' chỉ còn {xe.so_luong} chiếc, không đủ để đặt {item.quantity} chiếc.")
         xe.so_luong -= item.quantity
+        # Ensure inventory doesn't go negative
+        if xe.so_luong < 0:
+            xe.so_luong = 0
         xe.save()
+
+    # Increment coupon used_count only after successful order creation
+    if coupon:
+        coupon.used_count += 1
+        coupon.save()
+
     cart.items.all().delete()
     return order, None
 
@@ -291,7 +411,59 @@ def checkout(request):
     if not cart or cart.items.count() == 0:
         return Response({"detail": "Giỏ hàng trống."}, status=status.HTTP_400_BAD_REQUEST)
 
-    order, error = _checkout_transaction(cart)
+    # Lấy coupon code từ request
+    coupon_code = request.data.get("coupon_code", "").strip()
+    if coupon_code:
+        coupon_code = coupon_code.upper()
+
+    order, error = _checkout_transaction(cart, coupon_code=coupon_code if coupon_code else None)
     if error:
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
-    return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+    # If client requested a payment, create payment record and gateway request
+    payment_method = request.data.get("payment_method") or ""
+    payment_response = None
+    if payment_method:
+        try:
+            from payments.payment_gateways import get_payment_gateway
+            from payments.models import Payment
+
+            # Build IPN URL for gateway callbacks
+            ipn_url = request.build_absolute_uri(f"/api/payment/callback/{order.id}/")
+            return_url = request.data.get("return_url", "")
+
+            gateway = get_payment_gateway(
+                payment_method=payment_method,
+                order=order,
+                amount=order.total_price,
+                return_url=return_url,
+                ipn_url=ipn_url,
+            )
+            gateway_response = gateway.create_payment()
+
+            # Persist Payment record (best-effort)
+            payment = Payment.objects.create(
+                order=order,
+                user=request.user if request.user.is_authenticated else order.user,
+                payment_method=payment_method,
+                amount=order.total_price,
+                transaction_id=gateway_response.get("transaction_id", ""),
+                payment_url=gateway_response.get("payment_url", ""),
+                qr_code=gateway_response.get("qr_code", ""),
+                ipn_url=ipn_url,
+                status="pending",
+            )
+            payment_response = {
+                "payment_id": payment.id,
+                "payment_url": payment.payment_url,
+                "qr_code": payment.qr_code,
+                "transaction_id": payment.transaction_id,
+            }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not create payment for order {order.id}: {str(e)}")
+
+    serialized_order = OrderSerializer(order).data
+    if payment_response:
+        serialized_order["payment"] = payment_response
+    return Response(serialized_order, status=status.HTTP_201_CREATED)

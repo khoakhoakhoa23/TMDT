@@ -9,6 +9,8 @@ from django.conf import settings
 from django.test.utils import get_runner
 
 if __name__ == "__main__":
+    # Add server directory to Python path
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'server'))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "server.settings")
     django.setup()
     

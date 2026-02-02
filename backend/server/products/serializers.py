@@ -1,5 +1,5 @@
 ﻿from rest_framework import serializers
-from products.models import Location, LoaiXe, Xe, Review, CarImage, BlogPost
+from products.models import Location, LoaiXe, Xe, Review, CarImage, BlogPost, Wishlist
 from django.contrib.auth.models import User
 
 
@@ -385,3 +385,77 @@ class BlogPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPost
         fields = "__all__"
+
+
+# ==================== Wishlist Serializers ====================
+
+class WishlistSerializer(serializers.ModelSerializer):
+    """Serializer cho Wishlist"""
+    car = XeSerializer(source='xe', read_only=True)
+    added_at = serializers.DateTimeField(source='created_at', read_only=True)
+    
+    class Meta:
+        model = Wishlist
+        fields = [
+            "id",
+            "user",
+            "xe",
+            "car",
+            "added_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["user", "created_at", "updated_at"]
+    
+    def create(self, validated_data):
+        """Tự động gán user từ request"""
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
+    
+    def validate_xe(self, value):
+        """Validate xe tồn tại"""
+        if not value:
+            raise serializers.ValidationError("Vui lòng chọn xe")
+        return value
+
+
+class WishlistCreateSerializer(serializers.ModelSerializer):
+    """Serializer đơn giản để tạo wishlist item"""
+    car_id = serializers.CharField(write_only=True, help_text="Mã xe (ma_xe)")
+    
+    class Meta:
+        model = Wishlist
+        fields = ["car_id"]
+    
+    def validate_car_id(self, value):
+        """Validate mã xe tồn tại"""
+        if not value:
+            raise serializers.ValidationError("Vui lòng cung cấp mã xe")
+        try:
+            Xe.objects.get(ma_xe=value)
+        except Xe.DoesNotExist:
+            raise serializers.ValidationError(f"Không tìm thấy xe với mã '{value}'")
+        return value
+    
+    def create(self, validated_data):
+        """Tạo wishlist item"""
+        user = self.context["request"].user
+        car_id = validated_data.pop("car_id")
+        
+        # Lấy xe object
+        try:
+            xe = Xe.objects.get(ma_xe=car_id)
+        except Xe.DoesNotExist:
+            raise serializers.ValidationError(f"Không tìm thấy xe với mã '{car_id}'")
+        
+        # Kiểm tra xem đã có trong wishlist chưa
+        wishlist_item, created = Wishlist.objects.get_or_create(
+            user=user,
+            xe=xe,
+            defaults={}
+        )
+        
+        if not created:
+            raise serializers.ValidationError("Xe này đã có trong wishlist của bạn")
+        
+        return wishlist_item

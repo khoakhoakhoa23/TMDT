@@ -1,6 +1,18 @@
 import { useState, useEffect } from "react";
 import statsApi from "../../api/statsApi";
 import orderApi from "../../api/orderApi";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+} from "recharts";
 
 const AnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -8,10 +20,19 @@ const AnalyticsPage = () => {
   const [totalCarsSold, setTotalCarsSold] = useState(0);
   const [topSellingCars, setTopSellingCars] = useState([]);
   const [revenueByMonth, setRevenueByMonth] = useState({});
+  const [revenueSeries, setRevenueSeries] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
+  const [revenueSeriesLoading, setRevenueSeriesLoading] = useState(false);
+  const [topSellingLoading, setTopSellingLoading] = useState(false);
+
+  // Coupon analytics state
+  const [couponAnalytics, setCouponAnalytics] = useState(null);
+  const [couponUsageOverTime, setCouponUsageOverTime] = useState([]);
+  const [couponPerformance, setCouponPerformance] = useState([]);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
     fetchAllStats();
@@ -21,22 +42,51 @@ const AnalyticsPage = () => {
     fetchRevenueByMonth();
   }, [selectedYear, selectedMonth]);
 
+  useEffect(() => {
+    fetchRevenueSeries();
+  }, [selectedYear]);
+
+  const fetchCouponAnalytics = async () => {
+    try {
+      const [analyticsRes, usageRes, performanceRes] = await Promise.all([
+        statsApi.getCouponAnalytics(),
+        statsApi.getCouponUsageOverTime(),
+        statsApi.getCouponPerformance(),
+      ]);
+
+      setCouponAnalytics(analyticsRes.data);
+      setCouponUsageOverTime(usageRes.data);
+      setCouponPerformance(performanceRes.data);
+      setCouponLoading(false);
+
+      return analyticsRes.data;
+    } catch (err) {
+      console.error("Error fetching coupon analytics:", err);
+      setCouponLoading(false);
+      throw err;
+    }
+  };
+
   const fetchAllStats = async () => {
     try {
       setLoading(true);
       setError("");
+      setTopSellingLoading(true);
+      setCouponLoading(true);
 
-      const [todayRes, carsSoldRes, topCarsRes, ordersRes] = await Promise.all([
+      const [todayRes, carsSoldRes, topCarsRes, ordersRes, couponRes] = await Promise.all([
         statsApi.getRevenueToday(),
         statsApi.getTotalCarsSold(),
         statsApi.getTopSellingCars(),
         orderApi.getAll().catch(() => ({ data: { results: [] } })),
+        fetchCouponAnalytics().catch(() => null),
       ]);
 
       setRevenueToday(todayRes.data?.doanh_thu || 0);
       setTotalCarsSold(carsSoldRes.data?.tong_xe_da_ban || 0);
       setTopSellingCars(topCarsRes.data || []);
-      
+      setTopSellingLoading(false);
+
       // Lấy danh sách đơn hàng đã thanh toán
       const allOrders = ordersRes.data?.results || ordersRes.data || [];
       const paidOrders = allOrders.filter(order => order.payment_status === "paid");
@@ -64,6 +114,31 @@ const AnalyticsPage = () => {
         month: selectedMonth,
         revenue: 0,
       });
+    }
+  };
+
+  const fetchRevenueSeries = async () => {
+    setRevenueSeriesLoading(true);
+    try {
+      const months = Array.from({ length: 12 }, (_, i) => i + 1);
+      // Call API for each month in parallel
+      const responses = await Promise.all(
+        months.map((m) =>
+          statsApi.getRevenueByMonth(selectedYear, m).catch(() => ({
+            data: { doanh_thu: 0 },
+          }))
+        )
+      );
+      const series = months.map((m, idx) => ({
+        month: getMonthName(m),
+        revenue: responses[idx].data?.doanh_thu || 0,
+      }));
+      setRevenueSeries(series);
+    } catch (err) {
+      console.error("Error fetching revenue series:", err);
+      setRevenueSeries([]);
+    } finally {
+      setRevenueSeriesLoading(false);
     }
   };
 
@@ -232,6 +307,61 @@ const AnalyticsPage = () => {
         )}
       </div>
 
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h3 className="text-lg font-semibold mb-4">Doanh thu theo tháng ({selectedYear})</h3>
+          {revenueSeriesLoading ? (
+            <div className="h-72 flex items-center justify-center">
+              <div className="w-full animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ) : revenueSeries.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueSeries}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
+                <Legend />
+                <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-gray-500">Chưa có dữ liệu doanh thu</p>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h3 className="text-lg font-semibold mb-4">Top xe bán chạy (Biểu đồ)</h3>
+          {topSellingLoading ? (
+            <div className="h-72 flex items-center justify-center">
+              <div className="w-full animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ) : topSellingCars.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={topSellingCars.map((c, i) => ({ name: c.xe__ten_xe || c.ten_xe || `Xe ${i+1}`, sold: c.total_sold || 0 }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="sold" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-gray-500">Chưa có dữ liệu xe bán chạy</p>
+          )}
+        </div>
+      </div>
+
       {/* Danh sách đơn hàng đã thanh toán */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300">Danh sách đơn hàng đã thanh toán</h2>
@@ -278,6 +408,127 @@ const AnalyticsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Coupon Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Coupon Overview */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300">Coupon Analytics</h2>
+          {couponLoading ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">Đang tải dữ liệu coupon...</p>
+            </div>
+          ) : couponAnalytics ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {couponAnalytics.total_coupons}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Tổng coupon</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {couponAnalytics.active_coupons}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Coupon active</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {couponAnalytics.used_coupons}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Đã sử dụng</p>
+                </div>
+                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    {formatCurrency(couponAnalytics.total_discount_applied)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Tổng giảm giá</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <p>Không có dữ liệu coupon</p>
+            </div>
+          )}
+        </div>
+
+        {/* Top Coupons */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300">Top Coupons</h2>
+          {couponLoading ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">Đang tải dữ liệu...</p>
+            </div>
+          ) : couponAnalytics?.top_coupons?.length > 0 ? (
+            <div className="space-y-3">
+              {couponAnalytics.top_coupons.map((coupon, index) => (
+                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">
+                      {coupon.coupon__code}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {coupon.usage_count} lần sử dụng
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(coupon.total_discount)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              <p>Chưa có coupon nào được sử dụng</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Coupon Usage Over Time */}
+      {couponUsageOverTime.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300 mb-8">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300">
+            Coupon Usage (7 ngày gần nhất)
+          </h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={couponUsageOverTime}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(date) => new Date(date).toLocaleDateString('vi-VN', { month: 'short', day: 'numeric' })}
+              />
+              <YAxis />
+              <Tooltip
+                labelFormatter={(date) => new Date(date).toLocaleDateString('vi-VN')}
+                formatter={(value, name) => [
+                  name === 'coupon_orders' ? `${value} đơn` : `${formatCurrency(value)}`,
+                  name === 'coupon_orders' ? 'Đơn hàng' : 'Giảm giá'
+                ]}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="coupon_orders"
+                stroke="#8884d8"
+                strokeWidth={2}
+                name="Đơn hàng dùng coupon"
+              />
+              <Line
+                type="monotone"
+                dataKey="total_discount"
+                stroke="#82ca9d"
+                strokeWidth={2}
+                name="Tổng giảm giá"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 };

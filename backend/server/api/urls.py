@@ -2,7 +2,7 @@
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet
+from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet, WishlistViewSet
 from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout
@@ -16,7 +16,10 @@ from orders.api_views import (
 )
 from payments.views import PaymentViewSet, payment_callback
 from core.views import NotificationViewSet
-from analytics.views import doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay
+from analytics.views import (
+    doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay,
+    coupon_analytics, coupon_usage_over_time, coupon_performance
+)
 
 router = DefaultRouter()
 router.register(r"location", LocationViewSet)
@@ -24,6 +27,7 @@ router.register(r"loaixe", LoaiXeViewSet)
 router.register(r"xe", XeViewSet)
 router.register(r"review", ReviewViewSet, basename="review")
 router.register(r"car-image", CarImageViewSet, basename="car-image")
+router.register(r"wishlist", WishlistViewSet, basename="wishlist")
 router.register(r"payment", PaymentViewSet, basename="payment")
 router.register(r"nhanvien", NhanVienViewSet)
 router.register(r"khachhang", KhachHangViewSet)
@@ -62,6 +66,14 @@ urlpatterns = [
     path("thongke/doanhthu/<int:year>/<int:month>/", doanh_thu_thang),
     path("thongke/tong-xe-da-ban/", tong_xe_da_ban),
     path("thongke/top-xe-ban-chay/", top_xe_ban_chay),
+    # Coupon Analytics
+    path("thongke/coupon-analytics/", coupon_analytics),
+    path("thongke/coupon-usage-over-time/", coupon_usage_over_time),
+    path("thongke/coupon-performance/", coupon_performance),
+    # Order utilities APIs
+    path("check-schedule-conflict/", check_schedule_conflict_api, name="check_schedule_conflict"),
+    path("calculate-price/", calculate_price_api, name="calculate_price"),
+    path("validate-coupon/", validate_coupon_api, name="validate_coupon"),
     # Maps & Geocoding APIs (proxy để tránh CORS)
     path("maps/geocode/", geocode_address_api, name="geocode_address"),
     path("maps/distance/", calculate_distance_api, name="calculate_distance"),

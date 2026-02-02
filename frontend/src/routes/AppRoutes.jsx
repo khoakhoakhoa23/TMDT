@@ -12,6 +12,11 @@ import UsersPage from "../pages/admin/UsersPage";
 import ProfilePage from "../pages/ProfilePage";
 import AdminProfilePage from "../pages/admin/ProfilePage";
 import AnalyticsPage from "../pages/admin/AnalyticsPage";
+import ImportInvoicesPage from "../pages/admin/ImportInvoicesPage";
+import ExportInvoicesPage from "../pages/admin/ExportInvoicesPage";
+import ImportInvoiceForm from "../pages/admin/ImportInvoiceForm";
+import ExportInvoiceForm from "../pages/admin/ExportInvoiceForm";
+import NotificationsTester from "../components/NotificationsTester";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ForgotPassword from "../pages/ForgotPassword";
@@ -70,6 +75,62 @@ const AppRoutes = () => {
             element={
               <AdminRoute>
                 <AnalyticsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="import-invoices"
+            element={
+              <AdminRoute>
+                <ImportInvoicesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="import-invoices/create"
+            element={
+              <AdminRoute>
+                <ImportInvoiceForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="import-invoices/edit/:ma_hdn"
+            element={
+              <AdminRoute>
+                <ImportInvoiceForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="export-invoices"
+            element={
+              <AdminRoute>
+                <ExportInvoicesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="export-invoices/create"
+            element={
+              <AdminRoute>
+                <ExportInvoiceForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="export-invoices/edit/:ma_hdx"
+            element={
+              <AdminRoute>
+                <ExportInvoiceForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="notifications-test"
+            element={
+              <AdminRoute>
+                <NotificationsTester />
               </AdminRoute>
             }
           />

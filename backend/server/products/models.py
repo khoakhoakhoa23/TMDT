@@ -135,3 +135,23 @@ class BlogPost(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Wishlist(models.Model):
+    """Danh sách yêu thích của người dùng"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishlists")
+    xe = models.ForeignKey("Xe", on_delete=models.CASCADE, related_name="wishlists")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("user", "xe")  # Mỗi user chỉ có thể thêm 1 xe vào wishlist 1 lần
+        verbose_name = "Wishlist"
+        verbose_name_plural = "Wishlists"
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.xe.ten_xe}"

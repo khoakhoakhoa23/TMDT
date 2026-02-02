@@ -21,10 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load từ thư mục backend (parent của server)
 env_path = BASE_DIR.parent / ".env"
 if env_path.exists():
-    load_dotenv(env_path)
+    load_dotenv(env_path, override=True)
 else:
     # Fallback: load từ thư mục hiện tại
-    load_dotenv()
+    load_dotenv(override=True)
 
 
 # Quick-start development settings - unsuitable for production
@@ -42,6 +42,12 @@ DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 # Payment Development Mode - Tự động approve payment trong test (KHÔNG TỐN PHÍ)
 # Chỉ bật khi DEBUG=True
 PAYMENT_DEV_MODE = os.getenv("PAYMENT_DEV_MODE", "True" if DEBUG else "False") == "True"
+
+# MoMo payment settings (sandbox by default)
+MOMO_PARTNER_CODE = os.getenv("MOMO_PARTNER_CODE", "MOMO_PARTNER_CODE")
+MOMO_ACCESS_KEY = os.getenv("MOMO_ACCESS_KEY", "MOMO_ACCESS_KEY")
+MOMO_SECRET_KEY = os.getenv("MOMO_SECRET_KEY", "MOMO_SECRET_KEY")
+MOMO_PRODUCTION = os.getenv("MOMO_PRODUCTION", "False") == "True"
 
 ALLOWED_HOSTS = [
     host.strip() 
@@ -193,6 +199,33 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'payments': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 
 # Static files (CSS, JavaScript, Images)

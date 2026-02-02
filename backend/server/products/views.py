@@ -5,12 +5,12 @@ from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
 from django.shortcuts import get_object_or_404
 import logging
 
-from products.models import Location, LoaiXe, Xe, Review, CarImage, BlogPost
+from products.models import Location, LoaiXe, Xe, Review, CarImage, BlogPost, Wishlist
 from products.serializers import (
     LocationSerializer, LoaiXeSerializer, XeSerializer,
     ReviewSerializer, ReviewCreateSerializer,
     CarImageSerializer, CarImageCreateSerializer,
-    BlogPostSerializer
+    BlogPostSerializer, WishlistSerializer, WishlistCreateSerializer
 )
 
 
@@ -273,6 +273,32 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 comment=serializer.validated_data["comment"]
             )
             
+            # Tạo notification cho admin/staff về review mới (nếu có)
+            try:
+                from core.notifications import create_notification
+                from core.consumers import send_notification
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                staff_users = User.objects.filter(is_staff=True)
+                title = "Review mới"
+                message = f"Người dùng {request.user.username} vừa tạo review cho xe {xe.ten_xe}"
+                for staff in staff_users:
+                    notif = create_notification(user=staff, type="new_review", title=title, message=message, order=None)
+                    try:
+                        send_notification(staff.id, {
+                            "id": notif.id,
+                            "type": "new_review",
+                            "title": title,
+                            "message": message,
+                            "created_at": notif.created_at.isoformat() if hasattr(notif, "created_at") else None,
+                        })
+                    except Exception:
+                        # Best-effort: continue without failing review creation
+                        pass
+            except Exception:
+                # Don't block review creation if notifications fail
+                pass
+
             return Response(
                 ReviewSerializer(review, context={"request": request}).data,
                 status=status.HTTP_201_CREATED
@@ -407,3 +433,108 @@ class BlogPostViewSet(viewsets.ModelViewSet):
         if self.action in ["list", "retrieve"]:
             return []
         return [IsAdminUser()]
+
+
+# ==================== Wishlist ViewSet ====================
+
+class WishlistViewSet(viewsets.ModelViewSet):
+    """ViewSet cho Wishlist"""
+    queryset = Wishlist.objects.all()
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        """Sử dụng serializer khác cho create"""
+        if self.action == "create":
+            return WishlistCreateSerializer
+        return WishlistSerializer
+    
+    def get_queryset(self):
+        """Chỉ trả về wishlist của user hiện tại"""
+        return Wishlist.objects.filter(user=self.request.user).select_related("xe", "xe__loai_xe").prefetch_related("xe__car_images")
+    
+    def get_serializer_context(self):
+        """Truyền request vào serializer để build absolute URI cho image"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
+    def create(self, request, *args, **kwargs):
+        """Override create để serialize response đúng cách"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            # Serialize lại với WishlistSerializer để có đầy đủ thông tin car
+            instance = serializer.instance
+            response_serializer = WishlistSerializer(instance, context={'request': request})
+            headers = self.get_success_headers(response_serializer.data)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating wishlist item: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Request data: {dict(request.data)}")
+            raise
+    
+    @action(detail=False, methods=["get"], url_path="check")
+    def check(self, request):
+        """Kiểm tra xe có trong wishlist không"""
+        car_id = request.query_params.get("car_id")
+        if not car_id:
+            return Response(
+                {"detail": "Vui lòng cung cấp car_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            xe = Xe.objects.get(ma_xe=car_id)
+            wishlist_item = Wishlist.objects.filter(user=request.user, xe=xe).first()
+            in_wishlist = wishlist_item is not None
+            
+            return Response({
+                "in_wishlist": in_wishlist,
+                "wishlist_id": wishlist_item.id if wishlist_item else None,
+                "car_id": car_id
+            })
+        except Xe.DoesNotExist:
+            return Response(
+                {"detail": f"Không tìm thấy xe với mã '{car_id}'"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=["post"], url_path="add")
+    def add(self, request):
+        """Thêm xe vào wishlist (alias cho create)"""
+        return self.create(request)
+    
+    @action(detail=False, methods=["post"], url_path="remove-by-car")
+    def remove_by_car(self, request):
+        """Xóa xe khỏi wishlist bằng car_id"""
+        car_id = request.data.get("car_id")
+        if not car_id:
+            return Response(
+                {"detail": "Vui lòng cung cấp car_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            xe = Xe.objects.get(ma_xe=car_id)
+            wishlist_item = Wishlist.objects.filter(user=request.user, xe=xe).first()
+            
+            if wishlist_item:
+                wishlist_item.delete()
+                return Response(
+                    {"detail": "Đã xóa khỏi wishlist", "car_id": car_id},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"detail": "Xe này không có trong wishlist"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        except Xe.DoesNotExist:
+            return Response(
+                {"detail": f"Không tìm thấy xe với mã '{car_id}'"},
+                status=status.HTTP_404_NOT_FOUND
+            )

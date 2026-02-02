@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Location, LoaiXe, Xe, BlogPost, Review, CarImage
+from .models import Location, LoaiXe, Xe, BlogPost, Review, CarImage, Wishlist
 
 
 @admin.register(Location)
@@ -47,3 +47,12 @@ class CarImageAdmin(admin.ModelAdmin):
     search_fields = ("xe__ten_xe",)
     list_editable = ("is_primary", "order")
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ("user", "xe", "created_at", "updated_at")
+    list_filter = ("created_at", "updated_at")
+    search_fields = ("user__username", "xe__ten_xe", "xe__ma_xe")
+    readonly_fields = ("created_at", "updated_at")
+    date_hierarchy = "created_at"

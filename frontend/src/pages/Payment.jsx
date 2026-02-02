@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import axiosClient from "../api/axiosClient";
 import locationApi from "../api/locationApi";
 import paymentApi from "../api/paymentApi";
+import cartApi from "../api/cartApi";
 
 const todayISO = () => {
   const d = new Date();
@@ -59,6 +61,12 @@ const Payment = () => {
   const [paymentData, setPaymentData] = useState(null);
   const [showQRCode, setShowQRCode] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState("pending");
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponInfo, setCouponInfo] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   // Load locations from API
   useEffect(() => {
@@ -216,10 +224,103 @@ const Payment = () => {
       days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1;
     }
     
-    return pricePerDay * days;
+    const subtotal = pricePerDay * days;
+    
+    // Áp dụng discount nếu có coupon
+    if (couponInfo && couponInfo.sample_discount) {
+      return subtotal - couponInfo.sample_discount;
+    }
+    
+    return subtotal;
+  };
+  
+  const calculateDiscount = () => {
+    if (!couponInfo || !couponInfo.sample_discount) return 0;
+    return couponInfo.sample_discount;
+  };
+  
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Vui lòng nhập mã coupon");
+      setCouponInfo(null);
+      return;
+    }
+    
+    setValidatingCoupon(true);
+    setCouponError("");
+    
+    try {
+      const subtotal = calculateTotal();
+      const response = await axiosClient.post("validate-coupon/", {
+        coupon_code: couponCode.trim(),
+        order_total: subtotal,
+      });
+      
+      if (response.data.valid) {
+        setCouponInfo(response.data);
+        setCouponError("");
+        // Hiển thị toast notification thành công
+        toast.success(`🎉 Coupon "${response.data.coupon.code}" đã được áp dụng! Tiết kiệm ${response.data.discount_amount?.toLocaleString('vi-VN')} VNĐ`, {
+          position: "top-right",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      } else {
+        setCouponError(response.data.message || "Mã coupon không hợp lệ");
+        setCouponInfo(null);
+        // Hiển thị toast notification lỗi
+        toast.error(response.data.message || "Mã coupon không hợp lệ", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      }
+    } catch (error) {
+      const errorMessage = error?.response?.data?.message || error?.response?.data?.detail || "Lỗi khi validate coupon";
+      setCouponError(errorMessage);
+      setCouponInfo(null);
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+  
+  const handleRemoveCoupon = () => {
+    const oldCouponCode = couponInfo?.coupon?.code || couponCode;
+    setCouponCode("");
+    setCouponInfo(null);
+    setCouponError("");
+    // Hiển thị toast notification khi xóa coupon
+    if (oldCouponCode) {
+      toast.info(`Đã xóa coupon "${oldCouponCode}"`, {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    }
   };
 
-  const handleNext = () => {
+  const validateCouponBeforeCheckout = async () => {
+    if (!couponCode.trim()) return true; // Không có coupon thì ok
+
+    if (!couponInfo) {
+      // Coupon chưa được validate, thử validate lại
+      try {
+        await handleValidateCoupon();
+        return !!couponInfo; // Trả về true nếu validate thành công
+      } catch (error) {
+        toast.error("Vui lòng áp dụng coupon trước khi thanh toán", {
+          position: "top-center",
+          autoClose: 3000,
+        });
+        return false;
+      }
+    }
+
+    return true; // Coupon đã được validate
+  };
+
+  const handleNext = async () => {
     // Validate trước khi chuyển step
     if (currentStep === 1) {
       if (!billingInfo.name || !billingInfo.phone || !billingInfo.address || !billingInfo.city) {
@@ -271,71 +372,58 @@ const Payment = () => {
       return;
     }
 
+    // Validate coupon trước khi checkout
+    const couponValid = await validateCouponBeforeCheckout();
+    if (!couponValid) {
+      return; // Dừng lại nếu coupon không hợp lệ
+    }
+
     setLoading(true);
     try {
-      const days = rentalInfo.pickup.date && rentalInfo.dropoff.date
-        ? Math.ceil(
-            (new Date(rentalInfo.dropoff.date) - new Date(rentalInfo.pickup.date)) /
-              (1000 * 60 * 60 * 24)
-          )
-        : 1;
+      // Bước 1: Thêm xe vào giỏ hàng
+      const carId = car?.ma_xe || car?.id;
+      console.log("Adding car to cart:", carId);
 
-      const orderData = {
-        items: [{
-          xe_id: car?.ma_xe || car?.id,
-          quantity: 1,
-        }],
-        shipping_name: billingInfo.name,
-        shipping_phone: billingInfo.phone,
-        shipping_address: billingInfo.address,
-        shipping_city: billingInfo.city,
-        start_date: rentalInfo.pickup.date,
-        end_date: rentalInfo.dropoff.date,
-        pickup_location: rentalInfo.pickup.location,
-        return_location: rentalInfo.dropoff.location,
-        rental_days: days,
+      const cartResponse = await cartApi.addItem(carId, 1);
+      console.log("Cart response:", cartResponse);
+
+      // Bước 2: Chuẩn bị dữ liệu checkout
+      const checkoutData = {
+        coupon_code: couponCode.trim() || undefined,
         payment_method: paymentMethod,
+        return_url: `${window.location.origin}/payment/callback`,
       };
 
-      // Tạo order
-      const orderResponse = await axiosClient.post("order/", orderData);
-      
-      if (!orderResponse || !orderResponse.data || !orderResponse.data.id) {
-        console.error("Invalid order response:", orderResponse);
+      console.log("Checkout data:", checkoutData);
+
+      // Bước 3: Gọi checkout API (sẽ tự động lấy cart của user)
+      const checkoutResponse = await axiosClient.post("checkout/", checkoutData);
+      console.log("Checkout response:", checkoutResponse);
+
+      if (!checkoutResponse || !checkoutResponse.data) {
         throw new Error("Không thể tạo đơn hàng. Vui lòng thử lại.");
       }
-      
-      const orderId = orderResponse.data.id;
 
-      // Xử lý thanh toán theo phương thức
-      if (["momo", "zalopay", "vnpay"].includes(paymentMethod)) {
-        // Thanh toán qua gateway Việt Nam
-        const returnUrl = `${window.location.origin}/payment/callback?order_id=${orderId}`;
-        const paymentResponse = await paymentApi.createPayment(orderId, paymentMethod, returnUrl);
-        
-        if (!paymentResponse || !paymentResponse.data) {
-          console.error("Invalid payment response:", paymentResponse);
-          throw new Error("Không thể tạo payment request. Vui lòng thử lại.");
-        }
-        
-        // Đảm bảo paymentData có id trước khi set
-        if (!paymentResponse.data.id) {
-          console.error("Payment response missing id:", paymentResponse.data);
-          throw new Error("Payment response không hợp lệ. Vui lòng thử lại.");
-        }
-        
-        setPaymentData(paymentResponse.data);
-        setPaymentStatus(paymentResponse.data.status || "pending");
+      const { payment, ...orderData } = checkoutResponse.data;
+
+      // Bước 4: Xử lý thanh toán
+      if (payment && ["momo", "zalopay", "vnpay"].includes(paymentMethod)) {
+        // Có payment URL - chuyển sang step thanh toán
+        setPaymentData(payment);
+        setPaymentStatus(payment.status || "pending");
         setShowQRCode(true);
         setCurrentStep(5); // Chuyển sang step thanh toán
       } else {
-        // Fallback cho các phương thức khác (nếu có)
-        await axiosClient.post("checkout/", {
-          order_id: orderId,
-          payment_method: paymentMethod,
+        // Thanh toán thành công hoặc không cần payment gateway
+        const couponMessage = couponCode ? ` với coupon "${couponCode}"` : "";
+        toast.success(`🎉 Đặt hàng thành công${couponMessage}!`, {
+          position: "top-center",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
         });
-
-        alert("Thanh toán thành công!");
         navigate("/dashboard");
       }
     } catch (error) {
@@ -1062,23 +1150,87 @@ const Payment = () => {
                 <span className="font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300">$0</span>
               </div>
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3 transition-colors duration-300">
-                <div className="flex items-center space-x-2 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Apply promo code"
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
-                  />
-                  <button className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm font-semibold transition-colors duration-300">
-                    Apply now
-                  </button>
-                </div>
-              </div>
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 transition-colors duration-300">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">${(price / 23000).toFixed(2)}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">Overall price and includes rental discount</p>
+                {couponInfo ? (
+                  <div className="mb-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                          Coupon: {couponInfo.coupon.code}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          {couponInfo.coupon.description || "Đã áp dụng coupon"}
+                        </p>
+                        {couponInfo.sample_discount && (
+                          <p className="text-sm font-bold text-green-700 dark:text-green-300 mt-1">
+                            Giảm: {couponInfo.sample_discount.toLocaleString('vi-VN')} VNĐ
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleRemoveCoupon}
+                        className="self-start sm:self-center text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-semibold px-3 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-300"
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </div>
+                ) : (
+                  <div className="mb-2">
+                    {/* Mobile-first responsive layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => {
+                          setCouponCode(e.target.value);
+                          setCouponError("");
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            handleValidateCoupon();
+                          }
+                        }}
+                        placeholder="Nhập mã coupon"
+                        className={`w-full sm:flex-1 px-3 py-2 border rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300 ${
+                          couponError
+                            ? "border-red-500 dark:border-red-400"
+                            : "border-gray-300 dark:border-gray-600"
+                        }`}
+                      />
+                      <button
+                        onClick={handleValidateCoupon}
+                        disabled={validatingCoupon || !couponCode.trim()}
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold transition-colors duration-300"
+                      >
+                        {validatingCoupon ? "Đang kiểm tra..." : "Áp dụng"}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1">{couponError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {couponInfo && couponInfo.sample_discount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400 transition-colors duration-300">Discount</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400 transition-colors duration-300">
+                    -{calculateDiscount().toLocaleString('vi-VN')} VNĐ
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 transition-colors duration-300">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+                  <div className="flex-1">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
+                      ${(calculateTotal() / 23000).toFixed(2)}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
+                      {couponInfo ? "Giá đã áp dụng coupon" : "Overall price and includes rental discount"}
+                    </p>
+                  </div>
+                  {/* Mobile-friendly spacing */}
+                  <div className="sm:hidden"></div>
                 </div>
               </div>
             </div>

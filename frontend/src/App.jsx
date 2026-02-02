@@ -1,9 +1,11 @@
 import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { ToastContainer } from "react-toastify";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppRoutes from "./routes/AppRoutes";
 import "./styles/globals.css";
+import "react-toastify/dist/ReactToastify.css";
 
 // Google Client ID - nên lưu trong .env file
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -15,6 +17,17 @@ function AppContent() {
       <ThemeProvider>
         <AuthProvider>
           <AppRoutes />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -18,18 +18,21 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         onClose();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    // Use capture phase to catch events before they bubble
+    document.addEventListener("mousedown", handleClickOutside, true);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside, true);
     };
   }, [isOpen, onClose]);
 
