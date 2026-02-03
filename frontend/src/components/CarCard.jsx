@@ -75,16 +75,16 @@ const CarCard = ({ car, navigateTo = "category" }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none overflow-hidden hover:shadow-lg dark:hover:shadow-none transition-all duration-300 border border-gray-200 dark:border-gray-700">
-      <div className="relative bg-gray-50 dark:bg-gray-900/50">
-        <div 
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md dark:shadow-none overflow-hidden hover:shadow-2xl dark:hover:shadow-none transition-all duration-300 border border-gray-200 dark:border-gray-700 hover:-translate-y-1 hover:scale-[1.02]">
+      <div className="relative bg-gray-50 dark:bg-gray-900/50 overflow-hidden">
+        <div
           onClick={handleCardClick}
-          className="w-full h-56 flex items-center justify-center overflow-hidden cursor-pointer"
+          className="w-full h-56 flex items-center justify-center overflow-hidden cursor-pointer relative"
         >
           <img
             src={getImageUrl()}
             alt={car.ten_xe || "Car"}
-            className="w-full h-full object-contain p-4"
+            className="w-full h-full object-contain p-4 transition-transform duration-500 hover:scale-110"
             onError={(e) => {
               e.target.src = "/images/img_car.png";
             }}
@@ -114,11 +114,11 @@ const CarCard = ({ car, navigateTo = "category" }) => {
               }
             }
           }}
-          className="absolute top-2 right-2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-md dark:shadow-none hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300 z-10 border border-gray-200 dark:border-gray-700"
+          className="absolute top-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full shadow-md dark:shadow-none hover:bg-red-50 dark:hover:bg-gray-700 hover:scale-110 active:scale-95 transition-all duration-300 z-10 border border-gray-200 dark:border-gray-700"
           title={isFavorite ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
         >
           <svg
-            className={`w-5 h-5 ${isFavorite ? "text-red-500 fill-current" : "text-gray-600 dark:text-gray-300"} transition-colors duration-300`}
+            className={`w-5 h-5 ${isFavorite ? "text-red-500 fill-current scale-110" : "text-gray-600 dark:text-gray-300"} transition-all duration-300`}
             fill={isFavorite ? "currentColor" : "none"}
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -131,6 +131,12 @@ const CarCard = ({ car, navigateTo = "category" }) => {
             />
           </svg>
         </button>
+        {/* Discount badge animation */}
+        {originalPrice && (
+          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+            Sale
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -236,7 +242,7 @@ const CarCard = ({ car, navigateTo = "category" }) => {
                 navigate("/category");
               }
             }}
-            className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold"
+            className="px-5 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 active:scale-95 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 font-semibold"
           >
             {navigateTo === "detail" ? "Rent Now" : "View All"}
           </button>

@@ -1,80 +1,20 @@
-# Django Settings
-DJANGO_SECRET_KEY=your-secret-key-here
+# TMDT RAG Chatbot - Environment Configuration
+
+# ================================
+# OpenAI Configuration
+# ================================
+# Get your API key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Chat model - gpt-4o-mini is recommended for cost-effectiveness
+OPENAI_MODEL=gpt-4o-mini
+
+# Embedding model - text-embedding-3-small is recommended
+EMBEDDING_MODEL=text-embedding-3-small
+
+# ================================
+# Django Configuration
+# ================================
+DJANGO_SETTINGS_MODULE=server.settings
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database Configuration
-DB_NAME=web_ban_hang
-DB_USER=postgres
-DB_PASSWORD=your-database-password
-DB_HOST=localhost
-DB_PORT=5432
-
-# CORS Settings
-DJANGO_CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-
-# DRF Throttle Settings
-DRF_THROTTLE_ANON=60/hour
-DRF_THROTTLE_USER=120/hour
-
-# Security Settings (set to True in production)
-DJANGO_SECURE_SSL_REDIRECT=False
-DJANGO_SESSION_COOKIE_SECURE=False
-DJANGO_CSRF_COOKIE_SECURE=False
-
-# Google OAuth Settings
-# Client ID để verify Google OAuth tokens
-GOOGLE_CLIENT_ID=188966214696-rj8bomspmvc8ocmrb4ss7s6n8dnu7p3m.apps.googleusercontent.com
-
-# Facebook OAuth Settings
-# App ID và App Secret để verify Facebook OAuth tokens
-# Lấy từ: https://developers.facebook.com/apps/
-FACEBOOK_APP_ID=your-facebook-app-id
-FACEBOOK_APP_SECRET=your-facebook-app-secret
-
-# Payment Development Mode
-# Bật chế độ development để test payment mà không tốn phí
-# Chỉ hoạt động khi DJANGO_DEBUG=True
-PAYMENT_DEV_MODE=True
-
-# Email Configuration - Gmail SMTP
-# QUAN TRỌNG: Phải cấu hình để gửi email thật!
-# Bước 1: Tạo App Password tại https://myaccount.google.com/security
-# Bước 2: Copy App Password 16 ký tự (không có khoảng trắng)
-# Bước 3: Điền vào EMAIL_HOST_USER và EMAIL_HOST_PASSWORD dưới đây
-EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_USE_SSL=False
-EMAIL_HOST_USER=tanhkhoa06@gmail.com
-EMAIL_HOST_PASSWORD=your-16-char-app-password-here
-DEFAULT_FROM_EMAIL=tanhkhoa06@gmail.com
-
-# Frontend URL (for email links)
-FRONTEND_URL=http://localhost:5173
-SITE_NAME=MORENT
-
-# Redis Configuration (for WebSocket/Channels)
-# Nếu không có Redis, set USE_IN_MEMORY_CHANNELS=True (chỉ dùng cho development)
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-USE_IN_MEMORY_CHANNELS=False
- 
-# ================= Payment Gateways (production credentials) =================
-# MoMo
-MOMO_PARTNER_CODE=MOMO_PARTNER_CODE
-MOMO_ACCESS_KEY=MOMO_ACCESS_KEY
-MOMO_SECRET_KEY=MOMO_SECRET_KEY
-MOMO_ENDPOINT=https://payment.momo.vn/v2/gateway/api/create
-
-# ZaloPay
-ZALOPAY_APP_ID=ZALOPAY_APP_ID
-ZALOPAY_KEY1=ZALOPAY_KEY1
-ZALOPAY_KEY2=ZALOPAY_KEY2
-ZALOPAY_ENDPOINT=https://openapi.zalopay.vn/v2/create
-
-# VNPay
-VNPAY_TMN_CODE=VNPAY_TMN_CODE
-VNPAY_SECRET_KEY=VNPAY_SECRET_KEY
-VNPAY_ENDPOINT=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html

@@ -69,3 +69,4 @@ except Exception as e:
     print(f"❌ Django setup failed: {e}")
     sys.exit(1)
 
+

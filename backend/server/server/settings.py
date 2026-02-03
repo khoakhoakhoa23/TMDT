@@ -51,9 +51,13 @@ MOMO_PRODUCTION = os.getenv("MOMO_PRODUCTION", "False") == "True"
 
 ALLOWED_HOSTS = [
     host.strip() 
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
     if host.strip()
 ]
+
+# For testing, always allow testserver
+if 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 
 
 # Application definition
@@ -68,7 +72,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework",
     "rest_framework_simplejwt",
-    "core", "users", "products", "cart", "orders", "payments", "analytics",
+    "core", "users", "products", "cart", "orders", "payments", "analytics", "chat",
     "corsheaders",
     "rest_framework.authtoken",
     "djoser",

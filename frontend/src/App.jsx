@@ -3,7 +3,9 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ToastContainer } from "react-toastify";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ChatProvider } from "./contexts/ChatContext";
 import AppRoutes from "./routes/AppRoutes";
+import ChatWidget from "./components/ChatWidget";
 import "./styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -16,18 +18,21 @@ function AppContent() {
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-          />
+          <ChatProvider>
+            <AppRoutes />
+            <ChatWidget />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+            />
+          </ChatProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

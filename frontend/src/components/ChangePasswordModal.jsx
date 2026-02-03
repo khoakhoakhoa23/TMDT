@@ -14,9 +14,11 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
     new: false,
     confirm: false,
   });
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      setIsAnimating(true);
       setFormData({
         old_password: "",
         new_password: "",
@@ -24,6 +26,8 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
       });
       setError("");
       setSuccess("");
+    } else {
+      setIsAnimating(false);
     }
   }, [isOpen]);
 
@@ -95,19 +99,31 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isAnimating) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 transition-colors duration-300">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-none max-w-md w-full border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+    <div
+      className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 ${
+        isOpen ? "opacity-100 visible" : "opacity-0 invisible"
+      }`}
+      onClick={onClose}
+    >
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-none max-w-md w-full border border-gray-200 dark:border-gray-700 transition-all duration-300 ${
+          isOpen
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300">Đổi mật khẩu</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Đổi mật khẩu</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center transition-colors duration-300"
+            className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center transition-all duration-300 hover:rotate-90 active:scale-95"
           >
-            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -116,25 +132,25 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center transition-colors duration-300">
-              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-2 transition-colors duration-300" fill="currentColor" viewBox="0 0 20 20">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-              <p className="text-red-600 dark:text-red-400 text-sm transition-colors duration-300">{error}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-center transition-colors duration-300">
-              <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-2 transition-colors duration-300" fill="currentColor" viewBox="0 0 20 20">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center animate-[fadeIn_0.3s_ease-out]">
+              <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <p className="text-green-600 dark:text-green-400 text-sm transition-colors duration-300">{success}</p>
+              <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mật khẩu cũ <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -143,14 +159,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
                 name="old_password"
                 value={formData.old_password}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập mật khẩu cũ"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPasswords((prev) => ({ ...prev, old: !prev.old }))}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all duration-300 hover:scale-110 p-1"
               >
                 {showPasswords.old ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +183,7 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mật khẩu mới <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -176,14 +192,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
                 name="new_password"
                 value={formData.new_password}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập mật khẩu mới"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all duration-300 hover:scale-110 p-1"
               >
                 {showPasswords.new ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,13 +213,13 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
                 )}
               </button>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
               Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Xác nhận mật khẩu mới <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -212,14 +228,14 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
                 name="confirm_password"
                 value={formData.confirm_password}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 pr-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300"
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập lại mật khẩu mới"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-300"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-all duration-300 hover:scale-110 p-1"
               >
                 {showPasswords.confirm ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,18 +252,18 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-300"
+              className="px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 active:scale-95"
               disabled={loading}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               disabled={loading}
             >
               {loading ? (
@@ -256,7 +272,12 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
                   Đang đổi...
                 </>
               ) : (
-                "Đổi mật khẩu"
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Đổi mật khẩu
+                </>
               )}
             </button>
           </div>
