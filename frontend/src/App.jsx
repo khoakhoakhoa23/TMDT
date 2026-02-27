@@ -11,7 +11,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Google Client ID - nên lưu trong .env file
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-
+// khoangu
 // Component chính của app (không có GoogleOAuthProvider)
 function AppContent() {
   return (
@@ -48,7 +48,7 @@ function App() {
       </GoogleOAuthProvider>
     );
   }
-  
+
   // Nếu không có client_id, vẫn render app bình thường (nhưng Google Login sẽ không hoạt động)
   return <AppContent />;
 }
