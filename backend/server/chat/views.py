@@ -140,7 +140,7 @@ class ChatMessageListCreateView(APIView):
         
         # Lay tra loi tu bot
         bot_response = self._get_bot_response(session, content)
-        
+        #Hello
         # Luu tra loi cua bot
         bot_message = ChatMessage.objects.create(
             session=session,
