@@ -1,15 +1,25 @@
 """
 Chat Service Module - Module xu ly chat
-Tich hop retrieval, Prompt builder va OpenAI API
+Tich hop retrieval, Prompt builder va Gemini/OpenAI/Groq API
 """
+import sys
 import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+
+# Thêm đường dẫn cho config
+sys.path.insert(0, '../../..')
+
 from .models import ChatRequest, ChatResponse, Document
 from .retrieval import RetrievalService, get_retrieval_service
 from .prompt_builder import PromptBuilder, get_prompt_builder
 from .openai_client import OpenAIClient, get_openai_client
+from .gemini_client import GeminiClient, get_gemini_client
+from .groq_client import GroqClient, get_groq_client
+from .local_embeddings import LocalEmbeddingClient, get_local_embedding_client
 from .logging_utils import ChatLogger, get_logger
+from .memory import ConversationManager, get_memory_manager
+
 
 class ChatService:
     """
@@ -21,29 +31,66 @@ class ChatService:
         self,
         retrieval_service: RetrievalService = None,
         prompt_builder: PromptBuilder = None,
-        openai_client: OpenAIClient = None,
+        ai_client=None,
+        memory_manager: ConversationManager = None,
         logger: ChatLogger = None,
         auto_build_index: bool = True
     ):
         """
         Khoi tao Chat Service
-        
+
         Args:
             retrieval_service: Instance cua Retrieval Service
             prompt_builder: Instance cua Prompt Builder
-            openai_client: Instance cua OpenAI Client
+            ai_client: Instance cua Gemini/OpenAI/Groq Client
+            memory_manager: Instance cua Memory Manager
             logger: Instance cua Logger
             auto_build_index: Co tu dong xay dung index khong
         """
         self.retrieval_service = retrieval_service or get_retrieval_service()
         self.prompt_builder = prompt_builder or get_prompt_builder()
-        self.openai_client = openai_client or get_openai_client()
+        self.memory_manager = memory_manager or get_memory_manager()
         self.logger = logger or get_logger()
-        
+
+        # Thứ tự ưu tiên: Groq -> Gemini -> OpenAI
+        self.ai_client = ai_client
+        if self.ai_client is None:
+            # Ưu tiên 1: Groq (miễn phí, nhanh nhất)
+            try:
+                from config_ai import GROQ_API_KEY
+                if GROQ_API_KEY and GROQ_API_KEY != "gsk_...":
+                    groq_client = get_groq_client()
+                    if groq_client.is_available():
+                        self.ai_client = groq_client
+                        self.use_gemini = False
+                        self.use_groq = True
+                        print("✅ ChatService sử dụng GROQ AI (MIỄN PHÍ!)")
+                    else:
+                        raise Exception("Groq không khả dụng")
+                else:
+                    raise Exception("Groq API key chưa cấu hình")
+            except Exception:
+                # Ưu tiên 2: Gemini
+                try:
+                    gemini_client = get_gemini_client()
+                    if gemini_client.is_available():
+                        self.ai_client = gemini_client
+                        self.use_gemini = True
+                        self.use_groq = False
+                        print("✅ ChatService sử dụng Gemini AI")
+                    else:
+                        raise Exception("Gemini không khả dụng")
+                except Exception:
+                    # Fallback cuối: OpenAI
+                    self.ai_client = get_openai_client()
+                    self.use_gemini = False
+                    self.use_groq = False
+                    print("⚠️ ChatService fallback về OpenAI")
+
         # Tu dong xay dung index
         if auto_build_index:
             self._ensure_index_built()
-    
+
     def _ensure_index_built(self):
         """Dam bao index da duoc xay dung"""
         if self.retrieval_service.get_document_count() == 0:
@@ -53,7 +100,7 @@ class ChatService:
                 self.logger.logger.info("Knowledge base index built successfully")
             except Exception as e:
                 self.logger.log_error("Failed to build knowledge base", e)
-    
+
     def chat(
         self,
         session_id: str,
@@ -64,92 +111,109 @@ class ChatService:
     ) -> ChatResponse:
         """
         Xu ly yeu cau chat
-        
+
         Args:
-            session_id: ID phien chat
+            session_id: ID cua phien chat
             user_question: Cau hoi nguoi dung
-            user_id: ID nguoi dung
-            conversation_history: Lich su cuoc tro chuyen
-            context: Bo canh bo sung
-            
+            user_id: ID nguoi dung (neu co)
+            conversation_history: Lich su chat (neu co)
+            context: Them thong tin ve request
+
         Returns:
-            ChatResponse: Phan hoi chat
+            ChatResponse: Phan hoi tu chatbot
         """
         start_time = time.time()
-        
-        # 1. Tim kiem tai lieu lien quan
-        retrieval_start = time.time()
-        retrieval_result = self.retrieval_service.search(user_question)
-        retrieval_time = (time.time() - retrieval_start) * 1000
-        
-        # 2. Kiem tra co can chuyen tu van vien khong
-        requires_human = self.prompt_builder.should_escalate_to_human(
-            retrieval_result.documents,
-            user_question
-        )
-        
-        # 3. Xay dung cau tra loi
-        if requires_human or not retrieval_result.has_results():
-            # Khong co ket qua lien quan, chuyen tu van vien
-            answer = self.prompt_builder.build_no_context_response()
-            sources = []
-            
-            # Ghi nhan cau hoi khong duoc tra loi
-            self.logger.log_unanswered(session_id, user_question, context)
-            
-        else:
-            # Co ket qua lien quan, xay dung Prompt
-            messages = self.prompt_builder.build_prompt(
-                user_question=user_question,
-                documents=retrieval_result.documents,
-                conversation_history=conversation_history
-            )
-            
-            # 4. Goi OpenAI API
+
+        try:
+            # Log request
+            self.logger.log_chat_request(session_id, user_question, user_id)
+
+            # 1. Laylich su cuoc tro chuyen
+            if conversation_history is None:
+                conversation_history = self.memory_manager.get_history(session_id)
+
+            # 2. Tim kiem tai lieu lien quan
+            self.logger.logger.info(f"Searching for: {user_question}")
             try:
-                completion = self.openai_client.chat_completion(messages)
-                answer = completion.content
-            except Exception as e:
-                self.logger.log_error("OpenAI API error", e)
-                answer = (
-                    "Xin loi, hien tai he thong dang gap su co. "
-                    "Vui long thu lai sau hoac lien he hotline 1900 xxxx de duoc ho tro."
+                relevant_docs = self.retrieval_service.search(
+                    query=user_question,
+                    top_k=5
                 )
-                requires_human = True
-            
-            sources = retrieval_result.documents
-        
-        # 5. Ghi log
-        total_time = (time.time() - start_time) * 1000
-        source_ids = [s.id for s in sources]
-        
-        self.logger.log_chat(
-            session_id=session_id,
-            user_question=user_question,
-            bot_response=answer,
-            sources_used=source_ids,
-            retrieval_time_ms=retrieval_time,
-            total_time_ms=total_time,
-            metadata={
-                'user_id': user_id,
-                'num_sources': len(sources),
-                'requires_human': requires_human,
-                'context': context,
-            }
-        )
-        
-        # 6. Xay dung phan hoi
-        return ChatResponse(
-            answer=answer,
-            sources=sources,
-            requires_human=requires_human,
-            metadata={
-                'retrieval_time_ms': retrieval_time,
-                'total_time_ms': total_time,
-                'num_sources': len(sources),
-            }
-        )
-    
+                self.logger.logger.info(f"Found {len(relevant_docs)} relevant documents")
+            except Exception as e:
+                self.logger.logger.warning(f"Search failed: {e}, using keyword search only")
+                # Fallback to keyword search only if semantic search fails
+                relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
+
+            # 3. Xay dung prompt
+            prompt = self.prompt_builder.build_prompt(
+                question=user_question,
+                context_docs=relevant_docs,
+                conversation_history=conversation_history,
+                context=context
+            )
+
+            # 4. Chuyen doi tin nhan theo dinh dang cua AI
+            if self.use_gemini:
+                # Gemini format
+                messages = [
+                    {
+                        "role": msg["role"] if msg["role"] in ["user", "model"] else "user",
+                        "parts": [msg["content"]]
+                    }
+                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
+                ]
+            else:
+                # OpenAI/Groq format
+                messages = [
+                    {
+                        "role": msg["role"] if msg["role"] in ["user", "assistant", "system"] else "user",
+                        "content": msg["content"]
+                    }
+                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
+                ]
+
+            # 5. Goi AI API
+            try:
+                if self.use_gemini:
+                    response_text = self.ai_client.chat_completion(messages)["content"]
+                else:
+                    response_text = self.ai_client.chat(messages)
+            except Exception as api_error:
+                self.logger.logger.error(f"AI API call failed: {api_error}")
+
+                # Thử dùng keyword search result trực tiếp
+                if relevant_docs:
+                    response_text = self._generate_fallback_response(relevant_docs, user_question)
+                else:
+                    raise api_error
+
+            # 6. Luu lich su
+            self.memory_manager.add_message(session_id, "user", user_question)
+            self.memory_manager.add_message(session_id, "assistant", response_text)
+
+            # 7. Tinh toan thoi gian phan hoi
+            processing_time = time.time() - start_time
+
+            # 8. Log response
+            self.logger.log_chat_response(session_id, response_text, processing_time)
+
+            # 9. Trả về kết quả
+            return ChatResponse(
+                answer=response_text,
+                sources=[doc.metadata for doc in relevant_docs],
+                processing_time=processing_time
+            )
+
+        except Exception as e:
+            self.logger.log_error("Chat processing failed", e)
+            return ChatResponse(
+                answer="Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau!",
+                sources=[],
+                processing_time=time.time() - start_time,
+                error=str(e)
+            )
+
     def chat_with_stream(
         self,
         session_id: str,
@@ -159,159 +223,131 @@ class ChatService:
         context: Dict[str, Any] = None
     ):
         """
-        Xu ly chat theo kieu streaming
-        
+        Xu ly yeu cau chat voi phan hoi streaming
+
         Args:
-            session_id: ID phien chat
+            session_id: ID cua phien chat
             user_question: Cau hoi nguoi dung
-            user_id: ID nguoi dung
-            conversation_history: Lich su cuoc tro chuyen
-            context: Bo canh bo sung
-            
+            user_id: ID nguoi dung (neu co)
+            conversation_history: Lich su chat (neu co)
+            context: Them thong tin ve request
+
         Yields:
-            Cac chunk noi dung
+            dict: Cac chunk cua response
         """
-        # Tim kiem tai lieu lien quan
-        retrieval_result = self.retrieval_service.search(user_question)
-        
-        requires_human = self.prompt_builder.should_escalate_to_human(
-            retrieval_result.documents,
-            user_question
-        )
-        
-        if requires_human or not retrieval_result.has_results():
-            # Tra ve tin nhan chuyen tu van vien
-            answer = self.prompt_builder.build_no_context_response()
-            self.logger.log_unanswered(session_id, user_question, context)
-            yield answer
-            return
-        
-        # Xay dung Prompt
-        messages = self.prompt_builder.build_prompt(
-            user_question=user_question,
-            documents=retrieval_result.documents,
-            conversation_history=conversation_history
-        )
-        
-        # Goi API theo kieu streaming
-        answer_parts = []
+        start_time = time.time()
+
         try:
-            for chunk in self.openai_client.chat_completion_stream(messages):
-                answer_parts.append(chunk)
-                yield chunk
-            
-            # Ghi log
-            full_answer = ''.join(answer_parts)
-            source_ids = [s.id for s in retrieval_result.documents]
-            
-            self.logger.log_chat(
-                session_id=session_id,
-                user_question=user_question,
-                bot_response=full_answer,
-                sources_used=source_ids,
-                retrieval_time_ms=0,
-                total_time_ms=0,
-                metadata={
-                    'user_id': user_id,
-                    'num_sources': len(source_ids),
-                    'requires_human': False,
-                    'context': context,
-                }
+            # Log request
+            self.logger.log_chat_request(session_id, user_question, user_id)
+
+            # 1. Laylich su cuoc tro chuyen
+            if conversation_history is None:
+                conversation_history = self.memory_manager.get_history(session_id)
+
+            # 2. Tim kiem tai lieu lien quan
+            self.logger.logger.info(f"Searching for: {user_question}")
+            try:
+                relevant_docs = self.retrieval_service.search(
+                    query=user_question,
+                    top_k=5
+                )
+                self.logger.logger.info(f"Found {len(relevant_docs)} relevant documents")
+            except Exception as e:
+                self.logger.logger.warning(f"Search failed: {e}, using keyword search only")
+                relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
+
+            # 3. Xay dung prompt
+            prompt = self.prompt_builder.build_prompt(
+                question=user_question,
+                context_docs=relevant_docs,
+                conversation_history=conversation_history,
+                context=context
             )
-            
+
+            # 4. Chuyen doi tin nhan
+            if self.use_gemini:
+                messages = [
+                    {
+                        "role": msg["role"] if msg["role"] in ["user", "model"] else "user",
+                        "parts": [msg["content"]]
+                    }
+                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
+                ]
+                stream = self.ai_client.chat_completion_stream(messages)
+            else:
+                messages = [
+                    {
+                        "role": msg["role"] if msg["role"] in ["user", "assistant", "system"] else "user",
+                        "content": msg["content"]
+                    }
+                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
+                ]
+                stream = self.ai_client.chat_stream(messages)
+
+            # 5. Stream response
+            full_response = ""
+            for chunk in stream:
+                if chunk:
+                    full_response += chunk
+                    yield {
+                        "type": "chunk",
+                        "content": chunk,
+                        "streaming": True
+                    }
+
+            # 6. Luu lich su
+            self.memory_manager.add_message(session_id, "user", user_question)
+            self.memory_manager.add_message(session_id, "assistant", full_response)
+
+            # 7. Log response
+            processing_time = time.time() - start_time
+            self.logger.log_chat_response(session_id, full_response, processing_time)
+
+            yield {
+                "type": "complete",
+                "answer": full_response,
+                "sources": [doc.metadata for doc in relevant_docs],
+                "processing_time": processing_time
+            }
+
         except Exception as e:
-            self.logger.log_error("Streaming error", e)
-            yield (
-                "Xin loi, da xay ra loi. "
-                "Vui long thu lai sau hoac lien he hotline."
-            )
-    
-    def get_quick_replies(self, user_question: str) -> List[str]:
-        """
-        Lay goi y cau tra loi nhanh
-        
-        Args:
-            user_question: Cau hoi nguoi dung
-            
-        Returns:
-            Danh sach cau tra loi nhanh
-        """
-        retrieval_result = self.retrieval_service.search(user_question, top_k=3)
-        return self.prompt_builder.get_quick_replies(retrieval_result.documents)
-    
-    def rebuild_index(self, use_db: bool = False) -> int:
-        """
-        Xay dung lai index cua knowledge base
-        
-        Args:
-            use_db: Co lay du lieu xe tu database khong
-            
-        Returns:
-            So luong tai lieu
-        """
-        self.retrieval_service.clear_index()
-        
-        try:
-            from .knowledge_base import build_knowledge_base
-            kb = build_knowledge_base(use_db=use_db)
-            return kb.retrieval_service.get_document_count()
-        except Exception as e:
-            self.logger.log_error("Failed to rebuild index", e)
-            return 0
-    
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Lay trang thai service
-        
-        Returns:
-            Thong tin trang thai
-        """
-        return {
-            'openai_available': self.openai_client.is_available(),
-            'openai_model': self.openai_client.model,
-            'embedding_model': self.openai_client.embedding_model,
-            'document_count': self.retrieval_service.get_document_count(),
-            'index_stats': self.retrieval_service.get_index_stats(),
-        }
-    
-    def health_check(self) -> Dict[str, Any]:
-        """
-        Kiem tra здоровье
-        
-        Returns:
-            Trang thai здоровье
-        """
-        return {
-            'status': 'healthy',
-            'openai': self.openai_client.is_available(),
-            'index_loaded': self.retrieval_service.get_document_count() > 0,
-            'timestamp': datetime.now().isoformat(),
-        }
+            self.logger.log_error("Chat streaming failed", e)
+            yield {
+                "type": "error",
+                "error": str(e)
+            }
+
+    def _generate_fallback_response(self, docs: List[Document], question: str) -> str:
+        """Tao response fallback tu tai lieu khi AI fail"""
+        context_parts = []
+        for doc in docs:
+            title = doc.metadata.get("title", "Tài liệu")
+            content = doc.content[:500] if doc.content else ""
+            context_parts.append(f"**{title}**:\n{content}")
+
+        context = "\n\n".join(context_parts)
+
+        return f"""Dựa trên thông tin từ hệ thống, tôi tìm thấy:
+
+{context}
+
+---
+
+*Lưu ý: Đây là phản hồi từ tìm kiếm trực tiếp. Để có câu trả lời chi tiết hơn, vui lòng thử lại sau.*"""
+
+    def clear_session(self, session_id: str):
+        """Xoa lich su cua mot session"""
+        self.memory_manager.clear_history(session_id)
+        self.logger.logger.info(f"Cleared session: {session_id}")
 
 
-# Global service instance
-_chat_service: Optional[ChatService] = None
+# Singleton
+_chat_service = None
 
-
-def get_chat_service(
-    auto_build_index: bool = True
-) -> ChatService:
-    """
-    Lay instance Chat Service toan cuc
-    
-    Args:
-        auto_build_index: Co tu dong xay dung index khong
-        
-    Returns:
-        Instance ChatService
-    """
+def get_chat_service() -> ChatService:
+    """Lay ChatService singleton"""
     global _chat_service
     if _chat_service is None:
-        _chat_service = ChatService(auto_build_index=auto_build_index)
+        _chat_service = ChatService()
     return _chat_service
-
-
-def reset_chat_service():
-    """Reset Chat Service toan cuc (dung cho testing)"""
-    global _chat_service
-    _chat_service = None

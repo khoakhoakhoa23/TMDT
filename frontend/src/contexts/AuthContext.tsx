@@ -1,11 +1,46 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import authApi from "../api/authApi";
 
-const AuthContext = createContext(null);
+type UserRole = "admin" | "staff" | "user" | string | undefined;
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+type User =
+  | {
+      id?: number;
+      username?: string;
+      email?: string;
+      first_name?: string;
+      last_name?: string;
+      role?: UserRole;
+      avatar_url?: string | null;
+      profile?: unknown;
+    }
+  | null;
+
+type AuthContextValue = {
+  user: User;
+  loading: boolean;
+  updateUser: (userData: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
+  logout: () => void;
+  isAdmin: boolean;
+  isUser: boolean;
+};
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+type AuthProviderProps = {
+  children: ReactNode;
+};
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<User>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -16,7 +51,6 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // Thử dùng API mới /users/me/ để lấy đầy đủ thông tin
         try {
           const response = await authApi.getMe();
           setUser({
@@ -29,8 +63,7 @@ export const AuthProvider = ({ children }) => {
             avatar_url: response.data.avatar_url,
             profile: response.data.profile,
           });
-        } catch (meError) {
-          // Fallback về API cũ nếu API mới chưa có
+        } catch {
           const response = await authApi.getUserRole();
           setUser({
             username: response.data.username,
@@ -39,7 +72,6 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error("Error fetching user:", error);
-        // Nếu lỗi, clear user
         setUser(null);
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
@@ -51,15 +83,14 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  const updateUser = (userData) => {
+  const updateUser = (userData: Partial<User>) => {
     setUser((prev) => ({
-      ...prev,
-      ...userData,
+      ...(prev || {}),
+      ...(userData as User),
     }));
   };
 
   const refreshUser = async () => {
-    // Refresh user data từ API
     const token = localStorage.getItem("access_token");
     if (!token) return;
 
@@ -86,7 +117,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("refresh_token");
   };
 
-  const isAdmin = user?.role === "admin" || user?.role === "staff";
+  const isAdmin =
+    user?.role === "admin" || user?.role === "staff";
   const isUser = user?.role === "user";
 
   return (

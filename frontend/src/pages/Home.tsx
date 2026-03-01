@@ -6,8 +6,8 @@ import HeroCard from "../components/HeroCard";
 import PickupDropoffForm from "../components/PickupDropoffForm";
 
 const Home = () => {
-  const [popularCars, setPopularCars] = useState([]);
-  const [recommendationCars, setRecommendationCars] = useState([]);
+  const [popularCars, setPopularCars] = useState<any[]>([]);
+  const [recommendationCars, setRecommendationCars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,8 +17,7 @@ const Home = () => {
   const fetchCars = async () => {
     try {
       const response = await axiosClient.get("xe/");
-      const cars = response.data.results || response.data;
-      // Lấy 3 xe đầu làm popular, 5 xe tiếp theo làm recommendation
+      const cars = (response.data as any).results || response.data;
       setPopularCars(cars.slice(0, 3));
       setRecommendationCars(cars.slice(3, 8));
     } catch (error) {
@@ -31,7 +30,6 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#F6F7F9] dark:bg-gray-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-5 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        {/* Hero Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           <HeroCard
             title="The Best Platform for Car Rental"
@@ -64,13 +62,13 @@ const Home = () => {
           />
         </div>
 
-        {/* Booking Section */}
         <PickupDropoffForm />
 
-        {/* Popular Car Section */}
         <section className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Popular Car</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
+              Popular Car
+            </h2>
             <Link
               to="/category"
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm sm:text-base transition-colors duration-200"
@@ -81,7 +79,9 @@ const Home = () => {
 
           {loading ? (
             <div className="flex justify-center items-center h-48 sm:h-64">
-              <div className="text-base sm:text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải...</div>
+              <div className="text-base sm:text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">
+                Đang tải...
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -92,10 +92,11 @@ const Home = () => {
           )}
         </section>
 
-        {/* Recommendation Car Section */}
         <section className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recommendation Car</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">
+              Recommendation Car
+            </h2>
             <Link
               to="/category"
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm sm:text-base transition-colors duration-200"
@@ -106,7 +107,9 @@ const Home = () => {
 
           {loading ? (
             <div className="flex justify-center items-center h-48 sm:h-64">
-              <div className="text-base sm:text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">Đang tải...</div>
+              <div className="text-base sm:text-lg text-gray-600 dark:text-gray-400 transition-colors duration-300">
+                Đang tải...
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -122,3 +125,4 @@ const Home = () => {
 };
 
 export default Home;
+

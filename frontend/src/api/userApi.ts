@@ -2,44 +2,37 @@ import axiosClient from "./axiosClient";
 
 const userApi = {
   getAll() {
-    // Lấy danh sách tài khoản User (Django auth User)
     return axiosClient.get("accounts/");
   },
-  getById(id) {
+  getById(id: number | string) {
     return axiosClient.get(`accounts/${id}/`);
   },
-  create(data) {
+  create(data: any) {
     return axiosClient.post("accounts/", data);
   },
-  update(id, data) {
+  update(id: number | string, data: any) {
     return axiosClient.put(`accounts/${id}/`, data);
   },
-  delete(id) {
+  delete(id: number | string) {
     return axiosClient.delete(`accounts/${id}/`);
   },
   getKhachHang() {
-    // Lấy danh sách khách hàng (nếu cần)
     return axiosClient.get("khachhang/");
   },
-  
-  // Profile APIs
+
   getProfile() {
-    // Lấy thông tin profile của user hiện tại
     return axiosClient.get("users/update-profile/");
   },
-  
-  updateProfile(data) {
-    // Cập nhật thông tin profile
+
+  updateProfile(data: any) {
     return axiosClient.put("users/update-profile/", data);
   },
-  
-  changePassword(data) {
-    // Đổi mật khẩu
+
+  changePassword(data: any) {
     return axiosClient.post("users/change-password/", data);
   },
-  
-  uploadAvatar(formData) {
-    // Upload avatar
+
+  uploadAvatar(formData: FormData) {
     return axiosClient.post("users/upload-avatar/", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
@@ -49,6 +42,4 @@ const userApi = {
 };
 
 export default userApi;
-
-
 

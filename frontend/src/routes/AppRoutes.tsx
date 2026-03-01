@@ -27,7 +27,6 @@ import AdminRoute from "./AdminRoute";
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public routes with MainLayout */}
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="category" element={<Category />} />
@@ -38,14 +37,11 @@ const AppRoutes = () => {
         <Route path="reset-password/:token" element={<ResetPassword />} />
       </Route>
 
-      {/* Protected routes */}
       <Route element={<PrivateRoute />}>
         <Route path="payment" element={<Payment />} />
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
-          {/* Public route for all users */}
           <Route path="profile" element={<ProfilePage />} />
-          {/* Admin only routes */}
           <Route
             path="orders"
             element={

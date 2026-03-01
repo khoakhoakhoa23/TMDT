@@ -6,9 +6,21 @@ const cartApi = {
   },
 
   addItem(carId, quantity = 1) {
+    console.log("[cartApi.addItem] Calling API with:", { carId, quantity });
     return axiosClient.post("cart-item/", {
-      xe: carId,
+      xe_id: carId,
       quantity,
+    }).then(response => {
+      console.log("[cartApi.addItem] Success:", response.data);
+      return response;
+    }).catch(error => {
+      console.error("[cartApi.addItem] Error:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        message: error.message
+      });
+      throw error;
     });
   },
 

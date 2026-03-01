@@ -1,11 +1,11 @@
 import axiosClient from "./axiosClient";
 
 const authApi = {
-  register(data) {
+  register(data: any) {
     return axiosClient.post("register/", data);
   },
 
-  login(data) {
+  login(data: any) {
     return axiosClient.post("login/", data);
   },
 
@@ -14,37 +14,40 @@ const authApi = {
   },
 
   getMe() {
-    // API mới trả về đầy đủ user + avatar
     return axiosClient.get("users/me/");
   },
 
-  refreshToken(refreshToken) {
+  refreshToken(refreshToken: string) {
     return axiosClient.post("refresh/", {
       refresh: refreshToken,
     });
   },
 
-  googleLogin(token) {
+  googleLogin(token: string) {
     return axiosClient.post("google-login/", {
-      token: token,
+      token,
     });
   },
 
-  facebookLogin(token) {
+  facebookLogin(token: string) {
     return axiosClient.post("facebook-login/", {
-      token: token,
+      token,
     });
   },
 
-  requestPasswordReset(email) {
+  requestPasswordReset(email: string) {
     return axiosClient.post("users/request-password-reset/", {
-      email: email,
+      email,
     });
   },
 
-  resetPassword(token, newPassword, confirmPassword) {
+  resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
     return axiosClient.post("users/reset-password/", {
-      token: token,
+      token,
       new_password: newPassword,
       confirm_password: confirmPassword,
     });
@@ -52,3 +55,4 @@ const authApi = {
 };
 
 export default authApi;
+

@@ -427,7 +427,12 @@ const Payment = () => {
         navigate("/dashboard");
       }
     } catch (error) {
-      console.error("Payment error:", error);
+      console.error("Payment error - Full error object:", error);
+      console.error("Payment error - Response data:", error.response?.data);
+      console.error("Payment error - Response status:", error.response?.status);
+      console.error("Payment error - Response headers:", error.response?.headers);
+      console.error("Payment error - Request config:", error.config);
+      
       let errorMessage = "Có lỗi xảy ra khi thanh toán";
       
       if (error?.response?.data) {
@@ -439,6 +444,10 @@ const Payment = () => {
           errorMessage = error.response.data.message;
         } else if (Array.isArray(error.response.data) && error.response.data.length > 0) {
           errorMessage = error.response.data[0];
+        } else {
+          // Log all validation errors
+          console.error("Full validation errors:", JSON.stringify(error.response.data, null, 2));
+          errorMessage = "Lỗi validation: " + JSON.stringify(error.response.data);
         }
       } else if (error?.message) {
         errorMessage = error.message;
