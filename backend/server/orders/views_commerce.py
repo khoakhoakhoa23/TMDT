@@ -1,4 +1,7 @@
-﻿from django.db import transaction
+﻿import logging
+logger = logging.getLogger(__name__)
+
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
@@ -50,6 +53,47 @@ class CartItemViewSet(viewsets.ModelViewSet):
                 cart__session_key=session_key, cart__user__isnull=True
             ).select_related("xe", "cart")
         return CartItem.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to handle idempotent requests.
+        If the car already exists in the cart, update the quantity instead of throwing an error.
+        """
+        logger.info(f"[CartItem] Nhận request POST /api/cart-item/: {request.data}")
+
+        # First, validate with serializer to get/create cart
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            logger.error(f"[CartItem] Validation failed: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        logger.info(f"[CartItem] Validation passed. Creating/updating cart item...")
+
+        cart = serializer.validated_data.get("cart")
+        xe = serializer.validated_data.get("xe")
+        quantity = int(serializer.validated_data.get("quantity", 1))
+
+        # Check if item already exists in cart
+        existing_item = CartItem.objects.filter(cart=cart, xe=xe).first()
+
+        if existing_item:
+            logger.info(f"[CartItem] Item already exists (cart={cart.id}, xe={xe.id}), updating quantity to {quantity}")
+            # Item already exists - update quantity
+            existing_item.quantity = quantity
+            existing_item.save()
+            output_serializer = self.get_serializer(existing_item)
+            return Response(output_serializer.data, status=status.HTTP_200_OK)
+        else:
+            logger.info(f"[CartItem] Item not found, creating new one (cart={cart.id}, xe={xe.id})")
+            # Item doesn't exist - create new one
+            cart_item = CartItem.objects.create(
+                cart=cart,
+                xe=xe,
+                quantity=quantity
+            )
+            output_serializer = self.get_serializer(cart_item)
+            return Response(output_serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         cart = serializer.validated_data.get("cart")

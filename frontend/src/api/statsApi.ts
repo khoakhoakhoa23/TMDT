@@ -5,7 +5,7 @@ const statsApi = {
     return axiosClient.get("thongke/doanhthu-homnay/");
   },
 
-  getRevenueByMonth(year, month) {
+  getRevenueByMonth(year: number | string, month: number | string) {
     return axiosClient.get(`thongke/doanhthu/${year}/${month}/`);
   },
 
@@ -17,7 +17,6 @@ const statsApi = {
     return axiosClient.get("thongke/top-xe-ban-chay/");
   },
 
-  // Coupon Analytics
   getCouponAnalytics() {
     return axiosClient.get("thongke/coupon-analytics/");
   },

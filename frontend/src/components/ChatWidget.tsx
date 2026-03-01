@@ -2,7 +2,7 @@ import React from 'react';
 import ChatButton from './ChatButton';
 import ChatWindow from './ChatWindow';
 
-const ChatWidget = () => {
+const ChatWidget: React.FC = () => {
   return (
     <>
       <ChatButton />
@@ -12,6 +12,4 @@ const ChatWidget = () => {
 };
 
 export default ChatWidget;
-
-
 

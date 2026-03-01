@@ -1,6 +1,6 @@
 """
 Semantic Retrieval Module - Module tim kiem nguy sem
-Su dung OpenAI Embeddings de tim kiem tuong dong vector
+Su dung Gemini Embeddings de tim kiem tuong dong vector
 """
 
 import os
@@ -10,7 +10,6 @@ from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
 from .models import Document, DocumentType, RetrievalResult
-from .openai_client import get_openai_client
 
 
 class RetrievalService:
@@ -34,12 +33,39 @@ class RetrievalService:
     def __init__(self, index_dir: str = None, client=None):
         """
         Khoi tao retrieval service
-        
+
         Args:
             index_dir: Duong dan thu muc index
-            client: OpenAI client instance
+            client: Embedding client instance (Gemini/OpenAI/Local)
         """
-        self.client = client or get_openai_client()
+        import sys
+        sys.path.insert(0, '../../..')
+
+        # Ưu tiên: Local -> Gemini -> OpenAI
+        self.client = client
+        if self.client is None:
+            try:
+                from config_ai import USE_LOCAL_EMBEDDINGS
+                if USE_LOCAL_EMBEDDINGS:
+                    from .local_embeddings import get_local_embedding_client
+                    self.client = get_local_embedding_client()
+                    if self.client.is_available():
+                        print("✅ RetrievalService sử dụng LOCAL Embeddings (MIỄN PHÍ!)")
+                    else:
+                        raise Exception("Local embeddings không khả dụng")
+                else:
+                    raise Exception("Local embeddings không được bật")
+            except Exception:
+                try:
+                    from .gemini_client import get_gemini_client
+                    self.client = get_gemini_client()
+                    if not self.client.is_available():
+                        raise Exception("Gemini không khả dụng")
+                    print("✅ RetrievalService sử dụng Gemini")
+                except Exception:
+                    from .openai_client import get_openai_client
+                    self.client = get_openai_client()
+                    print("⚠️ RetrievalService fallback về OpenAI")
         
         # Thiet lap thu muc index
         if index_dir is None:
@@ -128,13 +154,17 @@ class RetrievalService:
         # Lay noi dung tat ca tai lieu
         texts = [doc.content for doc in self.documents]
         
-        # Lay vector theo lo
-        results = self.client.get_embeddings(texts)
-        
-        # Xay dung ma tran vector
-        self.embeddings_matrix = np.array([
-            result.embedding for result in results
-        ])
+        try:
+            # Lay vector theo lo
+            results = self.client.get_embeddings(texts)
+            
+            # Xay dung ma tran vector
+            self.embeddings_matrix = np.array([
+                result.embedding for result in results
+            ])
+        except Exception as e:
+            print(f"Error rebuilding embeddings: {e}. Index will rely on keyword search.")
+            self.embeddings_matrix = None
     
     def _get_embedding(self, text: str) -> np.ndarray:
         """
@@ -168,6 +198,61 @@ class RetrievalService:
             return 0.0
         
         return dot_product / (norm1 * norm2)
+
+    def _keyword_search(self, query: str) -> List[Tuple[int, float]]:
+        """
+        Tim kiem theo tu khoa (Fallback khi Semantic fail)
+        Co ho tro fuzzy matching cho typos
+        """
+        import re
+        from difflib import SequenceMatcher
+        
+        query_words = set(re.findall(r'\w+', query.lower()))
+        if not query_words:
+            return []
+        
+        # Cac tu khoa pho bien can xu ly special
+        greeting_words = {'hello', 'hi', 'hey', 'helo', 'heloo', 'helloo', 'xinchao', 'chào', 'chao'}
+        
+        # Kiem tra neu la greeting
+        is_greeting = any(word in greeting_words for word in query_words)
+        
+        results = []
+        for i, doc in enumerate(self.documents):
+            doc_content = (doc.title + " " + doc.content).lower()
+            doc_words = set(re.findall(r'\w+', doc_content))
+            
+            # Tinh overlap
+            overlap = query_words.intersection(doc_words)
+            
+            if overlap:
+                # Diem = (so tu trung / tong so tu truy van) * weight
+                score = (len(overlap) / len(query_words))
+                weighted_score = score * self.TYPE_WEIGHTS.get(doc.doc_type, 1.0)
+                results.append((i, weighted_score, score))
+            elif is_greeting:
+                # Fuzzy matching cho greetings
+                doc_titles_lower = doc.title.lower()
+                if any(greet in doc_titles_lower or greet in doc_content for greet in ['chào', 'hello', 'xin chào', 'tôi có thể giúp', 'trợ lý']):
+                    # Tim thay tu greeting trong document
+                    fuzzy_score = 0.5  # Diem trung binh cho fuzzy match
+                    weighted_score = fuzzy_score * self.TYPE_WEIGHTS.get(doc.doc_type, 1.0)
+                    results.append((i, weighted_score, fuzzy_score))
+        
+        # Neu khong co ket qua, thu tim kiem looser
+        if not results:
+            for i, doc in enumerate(self.documents):
+                doc_content = (doc.title + " " + doc.content).lower()
+                # Kiem tra substring matching
+                for qw in query_words:
+                    if len(qw) >= 3 and qw in doc_content:
+                        score = 0.3  # Diem thap hon cho substring match
+                        weighted_score = score * self.TYPE_WEIGHTS.get(doc.doc_type, 1.0)
+                        results.append((i, weighted_score, score))
+                        break
+        
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
     
     def search(
         self,
@@ -201,18 +286,25 @@ class RetrievalService:
                 total_docs_found=0
             )
         
-        # Lay vector cua truy van
-        query_embedding = self._get_embedding(query)
-        
-        # Tinh tuong dong voi tat ca tai lieu
+        # Lay vector cua truy van (semantic search)
         similarities = []
-        for i, doc_embedding in enumerate(self.embeddings_matrix):
-            score = self._cosine_similarity(query_embedding, doc_embedding)
-            doc = self.documents[i]
+        try:
+            query_embedding = self._get_embedding(query)
             
-            # Ap dung trong loai
-            weighted_score = score * self.TYPE_WEIGHTS.get(doc.doc_type, 1.0)
-            similarities.append((i, weighted_score, score))
+            # Tinh tuong dong voi tat ca tai lieu
+            for i, doc_embedding in enumerate(self.embeddings_matrix):
+                score = self._cosine_similarity(query_embedding, doc_embedding)
+                doc = self.documents[i]
+                
+                # Ap dung trong loai
+                weighted_score = score * self.TYPE_WEIGHTS.get(doc.doc_type, 1.0)
+                similarities.append((i, weighted_score, score))
+        except Exception as e:
+            # Fallback sang keyword search neu semantic fail (vd: het quota)
+            print(f"Semantic search failed, falling back to keyword search: {e}")
+            similarities = self._keyword_search(query)
+            # Khong dung min_score cho keyword search vi thang diem khac
+            min_score = 0.1 
         
         # Sap xep theo diem
         similarities.sort(key=lambda x: x[1], reverse=True)

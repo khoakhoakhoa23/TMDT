@@ -1,7 +1,12 @@
+import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-const AdminRoute = ({ children }) => {
+type AdminRouteProps = {
+  children: ReactNode;
+};
+
+const AdminRoute = ({ children }: AdminRouteProps) => {
   const { isAdmin, loading } = useAuth();
   const location = useLocation();
 
@@ -17,7 +22,6 @@ const AdminRoute = ({ children }) => {
   }
 
   if (!isAdmin) {
-    // Nếu không phải admin, redirect về dashboard
     return <Navigate to="/dashboard" replace state={{ from: location }} />;
   }
 
