@@ -158,12 +158,10 @@ class OrderViewSet(viewsets.ModelViewSet):
                 
                 # Tự động tạo hóa đơn xuất (bắt mọi lỗi để không trả 500)
                 try:
-                    from datetime import datetime
                     from users.models import KhachHang, NhanVien
 
-                    # Format ngắn: HDX{MM}{DD}{HHMM}{id} -> tối đa 10 ký tự
-                    now = datetime.now()
-                    ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{instance.id:03d}"  # VD: HDX0302113017 = 10 ký tự
+                    # Format: HDX + 7 chữ số từ order.id (tối đa 10 ký tự, phù hợp max_length=10)
+                    ma_hdx = f"HDX{instance.id:07d}"
                     
                     if HoaDonXuat.objects.filter(ma_hdx=ma_hdx).exists():
                         logger.info(f"Hóa đơn xuất {ma_hdx} đã tồn tại cho đơn hàng #{instance.id}")
@@ -192,6 +190,11 @@ class OrderViewSet(viewsets.ModelViewSet):
                                     xe=item.xe,
                                     so_luong=item.quantity
                                 )
+                            
+                            # Cập nhật order với hóa đơn xuất đã tạo
+                            instance.hoa_don_xuat = hoa_don_xuat
+                            instance.save(update_fields=['hoa_don_xuat'])
+                            
                             logger.info(f"Đã tự động tạo hóa đơn xuất {ma_hdx} cho đơn hàng #{instance.id}")
                         else:
                             logger.info("Bỏ qua tạo hóa đơn xuất: thiếu KhachHang hoặc NhanVien trong DB.")
@@ -571,7 +574,6 @@ def generate_export_invoices(request):
     API tạo hóa đơn xuất cho tất cả đơn hàng đã hoàn thành nhưng chưa có hóa đơn xuất.
     Tự động tạo KhachHang và NhanVien mẫu nếu chưa có.
     """
-    from datetime import datetime
     from django.db.models import Q
     
     # Lấy tất cả đơn hàng đã hoàn thành
@@ -618,11 +620,10 @@ def generate_export_invoices(request):
     
     created = 0
     skipped = 0
-    now = datetime.now()
     
     for order in completed_orders:
-        # Tạo mã hóa đơn
-        ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{order.id:03d}"
+        # Tạo mã hóa đơn: HDX + 7 chữ số từ order.id (tối đa 10 ký tự)
+        ma_hdx = f"HDX{order.id:07d}"
         
         # Bỏ qua nếu đã tồn tại
         if ma_hdx in existing_hdx_codes:
@@ -636,7 +637,7 @@ def generate_export_invoices(request):
             
             hoa_don_xuat = HoaDonXuat.objects.create(
                 ma_hdx=ma_hdx,
-                ngay=now.date(),
+                ngay=timezone.now().date(),
                 nhan_vien=nhan_vien,
                 khach_hang=khach_hang
             )
@@ -648,6 +649,10 @@ def generate_export_invoices(request):
                     xe=item.xe,
                     so_luong=item.quantity
                 )
+            
+            # Cập nhật order với hóa đơn xuất đã tạo
+            order.hoa_don_xuat = hoa_don_xuat
+            order.save(update_fields=['hoa_don_xuat'])
             
             existing_hdx_codes.add(ma_hdx)
             created += 1
@@ -671,7 +676,6 @@ def get_completed_orders_without_invoice(request):
     """
     API lấy danh sách đơn hàng đã hoàn thành nhưng chưa có hóa đơn xuất.
     """
-    from datetime import datetime
     from users.models import KhachHang, NhanVien
     
     # Lấy tất cả đơn hàng đã hoàn thành
@@ -686,12 +690,11 @@ def get_completed_orders_without_invoice(request):
     # Lấy danh sách mã hóa đơn xuất đã tồn tại
     existing_hdx_codes = set(HoaDonXuat.objects.values_list("ma_hdx", flat=True))
     
-    now = datetime.now()
     orders_without_invoice = []
     
     for order in completed_orders:
-        # Tạo mã hóa đơn dự kiến
-        ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{order.id:03d}"
+        # Tạo mã hóa đơn dự kiến: HDX + 7 chữ số từ order.id
+        ma_hdx = f"HDX{order.id:07d}"
         
         if ma_hdx not in existing_hdx_codes:
             orders_without_invoice.append({

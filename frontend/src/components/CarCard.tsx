@@ -86,7 +86,8 @@ const CarCard = ({ car, navigateTo = "category" }) => {
             alt={car.ten_xe || "Car"}
             className="w-full h-full object-contain p-4 transition-transform duration-500 hover:scale-110"
             onError={(e) => {
-              e.target.src = "/images/img_car.png";
+              const target = e.target as HTMLImageElement;
+              target.src = "/images/img_car.png";
             }}
           />
         </div>

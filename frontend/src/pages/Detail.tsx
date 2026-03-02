@@ -238,7 +238,8 @@ const Detail = () => {
               alt={car.ten_xe}
               className="w-full h-auto object-contain"
               onError={(e) => {
-                e.target.src = "/images/img_car.png";
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/img_car.png";
               }}
             />
           </div>
@@ -261,7 +262,8 @@ const Detail = () => {
                 alt={car.ten_xe}
                 className="w-full h-64 sm:h-80 md:h-96 object-contain bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 transition-colors duration-300"
                 onError={(e) => {
-                  e.target.src = "/images/img_car.png";
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/images/img_car.png";
                 }}
               />
             </div>
@@ -283,7 +285,8 @@ const Detail = () => {
                       alt={`Thumbnail ${index + 1}`}
                       className="w-full h-20 sm:h-24 object-contain bg-gray-50 dark:bg-gray-900/50 p-2 transition-colors duration-300"
                       onError={(e) => {
-                        e.target.src = "/images/img_car.png";
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/images/img_car.png";
                       }}
                     />
                   </button>
@@ -465,9 +468,10 @@ const Detail = () => {
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               // Fallback to initials if image fails
-                              e.target.style.display = "none";
-                              const parent = e.target.parentElement;
-                              const fallback = parent.querySelector(".avatar-fallback");
+                              const target = e.target as HTMLElement;
+                              target.style.display = "none";
+                              const parent = target.parentElement;
+                              const fallback = parent?.querySelector(".avatar-fallback");
                               if (fallback) fallback.style.display = "flex";
                             }}
                           />

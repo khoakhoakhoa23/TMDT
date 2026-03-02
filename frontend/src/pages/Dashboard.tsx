@@ -200,7 +200,8 @@ const Dashboard = () => {
                 alt={displayOrder.items[0].xe?.ten_xe || "Car"}
                 className="w-20 h-20 object-contain rounded bg-white dark:bg-gray-700 p-2 transition-colors duration-300"
                 onError={(e) => {
-                  e.target.src = "/images/img_car.png";
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/images/img_car.png";
                 }}
               />
               <div>
@@ -483,7 +484,8 @@ const Dashboard = () => {
                     alt={car?.ten_xe || "Car"}
                     className="w-16 h-16 object-contain rounded bg-gray-50 dark:bg-gray-700 p-2 transition-colors duration-300"
                     onError={(e) => {
-                      e.target.src = "/images/img_car.png";
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/images/img_car.png";
                     }}
                   />
                   <div className="flex-1">

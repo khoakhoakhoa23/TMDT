@@ -6,12 +6,14 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     defaultValues: {
       ten_dia_diem: "",
       dia_chi_chi_tiet: "",
     }
   });
+
+  const formValues = watch();
 
   const onSubmit = async (data) => {
     setSuccess("");
@@ -126,7 +128,7 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.ten_dia_diem.trim()}
+              disabled={loading || !formValues.ten_dia_diem?.trim()}
               className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {loading ? (

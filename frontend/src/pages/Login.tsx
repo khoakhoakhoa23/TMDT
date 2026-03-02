@@ -6,11 +6,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
 
 // Kiểm tra xem có Google Client ID không
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
 const HAS_GOOGLE_OAUTH = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.trim() !== "";
 
 // Kiểm tra xem có Facebook App ID không
-const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
+const FACEBOOK_APP_ID = (import.meta as any).env?.VITE_FACEBOOK_APP_ID || "";
 const HAS_FACEBOOK_OAUTH = FACEBOOK_APP_ID && FACEBOOK_APP_ID.trim() !== "";
 
 // Floating Input Component với animation
