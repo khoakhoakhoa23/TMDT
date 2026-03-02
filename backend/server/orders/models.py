@@ -198,6 +198,16 @@ class Order(models.Model):
     
     # Giữ chỗ
     reserved_until = models.DateTimeField(null=True, blank=True, help_text="Thời hạn giữ chỗ (timeout)")
+    
+    # Hóa đơn xuất (tự động tạo khi đơn hàng hoàn thành)
+    hoa_don_xuat = models.ForeignKey(
+        "HoaDonXuat", 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name="orders",
+        help_text="Hóa đơn xuất tự động tạo khi đơn hàng hoàn thành"
+    )
 
     def check_reservation_expired(self):
         """Kiểm tra và xử lý order hết hạn giữ chỗ"""

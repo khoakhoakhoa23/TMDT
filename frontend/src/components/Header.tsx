@@ -238,9 +238,10 @@ const Header = () => {
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         // Fallback to initials if image fails
-                        e.target.style.display = "none";
-                        const parent = e.target.parentElement;
-                        const fallback = parent.querySelector(".avatar-fallback");
+                        const target = e.target as HTMLElement;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        const fallback = parent?.querySelector(".avatar-fallback") as HTMLElement | null;
                         if (fallback) fallback.style.display = "flex";
                       }}
                     />

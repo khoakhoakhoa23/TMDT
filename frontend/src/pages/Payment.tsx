@@ -799,7 +799,7 @@ const Payment = () => {
                     className="w-4 h-4 text-blue-600 dark:text-blue-500"
                   />
                   <span className="ml-3 font-semibold flex-1 text-gray-900 dark:text-gray-100 transition-colors duration-300">MoMo</span>
-                  <img src="/images/momo_logo.png" alt="MoMo" className="ml-auto h-6" onError={(e) => e.target.style.display = "none"} />
+                  <img src="/images/momo_logo.png" alt="MoMo" className="ml-auto h-6" onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; }} />
                 </label>
 
                 {/* ZaloPay */}
@@ -817,7 +817,7 @@ const Payment = () => {
                     className="w-4 h-4 text-blue-600 dark:text-blue-500"
                   />
                   <span className="ml-3 font-semibold flex-1 text-gray-900 dark:text-gray-100 transition-colors duration-300">ZaloPay</span>
-                  <img src="/images/zalopay_logo.png" alt="ZaloPay" className="ml-auto h-6" onError={(e) => e.target.style.display = "none"} />
+                  <img src="/images/zalopay_logo.png" alt="ZaloPay" className="ml-auto h-6" onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; }} />
                 </label>
 
                 {/* VNPay */}
@@ -835,7 +835,7 @@ const Payment = () => {
                     className="w-4 h-4 text-blue-600 dark:text-blue-500"
                   />
                   <span className="ml-3 font-semibold flex-1 text-gray-900 dark:text-gray-100 transition-colors duration-300">VNPay</span>
-                  <img src="/images/vnpay_logo.png" alt="VNPay" className="ml-auto h-6" onError={(e) => e.target.style.display = "none"} />
+                  <img src="/images/vnpay_logo.png" alt="VNPay" className="ml-auto h-6" onError={(e) => { const target = e.target as HTMLImageElement; target.style.display = "none"; }} />
                 </label>
               </div>
 
@@ -946,8 +946,9 @@ const Payment = () => {
                       className="w-64 h-64"
                       onError={(e) => {
                         // Fallback nếu QR code không load được
-                        e.target.style.display = "none";
-                        const fallback = e.target.nextSibling;
+                        const target = e.target as HTMLElement;
+                        target.style.display = "none";
+                        const fallback = target.nextSibling as HTMLElement;
                         if (fallback) fallback.style.display = "block";
                       }}
                     />

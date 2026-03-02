@@ -115,6 +115,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    hoa_don_xuat = serializers.SerializerMethodField()
+    hoa_don_xuat_ma = serializers.CharField(source='hoa_don_xuat.ma_hdx', read_only=True, allow_null=True)
 
     class Meta:
         model = Order
@@ -137,5 +139,17 @@ class OrderSerializer(serializers.ModelSerializer):
             "return_location",
             "rental_days",
             "items",
+            "hoa_don_xuat",
+            "hoa_don_xuat_ma",
         ]
         read_only_fields = ["user", "created_at", "total_price", "payment_status"]
+
+    def get_hoa_don_xuat(self, obj):
+        if obj.hoa_don_xuat:
+            return {
+                "ma_hdx": obj.hoa_don_xuat.ma_hdx,
+                "ngay": obj.hoa_don_xuat.ngay,
+                "nhan_vien": obj.hoa_don_xuat.nhan_vien.ten if obj.hoa_don_xuat.nhan_vien else None,
+                "khach_hang": obj.hoa_don_xuat.khach_hang.ten if obj.hoa_don_xuat.khach_hang else None,
+            }
+        return None

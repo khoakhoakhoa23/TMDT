@@ -122,7 +122,8 @@ const HeroCard = ({
         alt="Car"
         className={responsiveCarImageClasses}
         onError={(e) => {
-          e.target.src = "/images/img_car.png";
+          const target = e.target as HTMLImageElement;
+          target.src = "/images/img_car.png";
         }}
       />
     </section>
