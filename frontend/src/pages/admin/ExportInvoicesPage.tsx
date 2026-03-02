@@ -18,10 +18,13 @@ const ExportInvoicesPage = () => {
   const loadInvoices = async () => {
     try {
       const response = await invoiceApi.getExportInvoices();
-      setInvoices(response.data.results || response.data);
-    } catch (error) {
+      const data = response.data;
+      const list = Array.isArray(data) ? data : (data?.results ?? []);
+      setInvoices(list);
+    } catch (error: unknown) {
       console.error("Error loading export invoices:", error);
-      toast.error("Không thể tải danh sách hóa đơn xuất");
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(msg || "Không thể tải danh sách hóa đơn xuất. Vui lòng đăng nhập.");
     } finally {
       setLoading(false);
     }
@@ -32,10 +35,10 @@ const ExportInvoicesPage = () => {
     try {
       // Lấy chi tiết hóa đơn
       const detailsResponse = await invoiceApi.getExportInvoiceDetails();
-      const invoiceDetails = detailsResponse.data.results?.filter(
-        detail => detail.hoa_don === invoice.ma_hdx
-      ) || detailsResponse.data.filter(
-        detail => detail.hoa_don === invoice.ma_hdx
+      const detailsData = detailsResponse.data;
+      const detailsList = Array.isArray(detailsData) ? detailsData : (detailsData?.results ?? []);
+      const invoiceDetails = detailsList.filter(
+        (detail: { hoa_don?: string }) => detail.hoa_don === invoice.ma_hdx
       );
       setDetails(invoiceDetails);
     } catch (error) {
@@ -120,10 +123,10 @@ const ExportInvoicesPage = () => {
                     {new Date(invoice.ngay).toLocaleDateString('vi-VN')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {invoice.nhan_vien || 'N/A'}
+                    {invoice.nhan_vien_name || invoice.nhan_vien || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {invoice.khach_hang || 'N/A'}
+                    {invoice.khach_hang_name || invoice.khach_hang || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
@@ -174,10 +177,10 @@ const ExportInvoicesPage = () => {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <p><strong>Ngày xuất:</strong> {new Date(selectedInvoice.ngay).toLocaleDateString('vi-VN')}</p>
-                <p><strong>Nhân viên:</strong> {selectedInvoice.nhan_vien || 'N/A'}</p>
+                <p><strong>Nhân viên:</strong> {selectedInvoice.nhan_vien_name || selectedInvoice.nhan_vien || 'N/A'}</p>
               </div>
               <div>
-                <p><strong>Khách hàng:</strong> {selectedInvoice.khach_hang || 'N/A'}</p>
+                <p><strong>Khách hàng:</strong> {selectedInvoice.khach_hang_name || selectedInvoice.khach_hang || 'N/A'}</p>
               </div>
             </div>
 
@@ -194,7 +197,7 @@ const ExportInvoicesPage = () => {
                 <tbody>
                   {details.map((detail, index) => (
                     <tr key={index} className="border-t">
-                      <td className="px-4 py-2">{detail.xe?.ten_xe || 'N/A'}</td>
+                      <td className="px-4 py-2">{detail.xe_detail?.ten_xe || detail.xe?.ten_xe || 'N/A'}</td>
                       <td className="px-4 py-2 text-center">{detail.so_luong}</td>
                       <td className="px-4 py-2 text-center">chiếc</td>
                     </tr>

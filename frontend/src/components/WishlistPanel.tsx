@@ -101,11 +101,13 @@ const WishlistPanel = ({ isOpen, onClose }) => {
       if (imageUrl.startsWith("http")) {
         return imageUrl;
       }
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+      const baseUrl =
+        (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
       return baseUrl.replace("/api", "") + (imageUrl.startsWith("/") ? imageUrl : "/" + imageUrl);
     }
     if (image) {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+      const baseUrl =
+        (import.meta as any).env?.VITE_API_BASE_URL || "http://127.0.0.1:8000";
       const imagePath = image.startsWith("/") ? image : "/" + image;
       return baseUrl.replace("/api", "") + imagePath;
     }
@@ -203,7 +205,7 @@ const WishlistPanel = ({ isOpen, onClose }) => {
                           alt={car.ten_xe || "Car"}
                           className="w-20 h-20 object-contain rounded-lg bg-gray-100 p-2 hover:bg-gray-200 transition-colors"
                           onError={(e) => {
-                            e.target.src = "/images/img_car.png";
+                            (e.currentTarget as HTMLImageElement).src = "/images/img_car.png";
                           }}
                         />
                       </div>

@@ -1,41 +1,35 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import authApi from "../api/authApi";
 import { useNavigate, Link } from "react-router-dom";
 
 // Floating Input Component với animation
-function FloatingInput({ name, type, placeholder, value, onChange, disabled, error }) {
+function FloatingInput({ name, type, placeholder, disabled, error, register, label }) {
   const [isFocused, setIsFocused] = useState(false);
-  const [hasValue, setHasValue] = useState(false);
-
-  useEffect(() => {
-    setHasValue(value && value.length > 0);
-  }, [value]);
 
   return (
     <div className="relative mb-4">
       <input
-        name={name}
+        {...register(name)}
         type={type}
         placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onBlur={() => setIsFocused(false)}
-        onFocus={() => setIsFocused(true)}
         disabled={disabled}
         className={`w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 border-2 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${
           error
             ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:focus:ring-red-900/20"
             : "border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        onBlur={() => setIsFocused(false)}
+        onFocus={() => setIsFocused(true)}
       />
       <label
         className={`absolute left-4 pointer-events-none transition-all duration-300 ${
-          isFocused || hasValue
+          isFocused
             ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium"
             : "top-3.5 text-gray-500 dark:text-gray-400"
         } ${error ? "text-red-500 dark:text-red-400" : ""}`}
       >
-        {placeholder}
+        {label || placeholder}
       </label>
     </div>
   );
@@ -145,29 +139,27 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+    }
   });
+
+  const password = watch("password", "");
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) navigate("/");
   }, [navigate]);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
-  }
-
-  async function handleRegister(e) {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
     setError("");
 
     try {
-      await authApi.register(form);
+      await authApi.register(data);
       setIsSuccess(true);
     } catch (err) {
       const errorData = err.response?.data || {};
@@ -189,7 +181,7 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   const handleLoginClick = () => {
     navigate("/login");
@@ -221,46 +213,53 @@ export default function Register() {
             <>
               {error && <ErrorAlert message={error} />}
 
-              <form onSubmit={handleRegister} className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <FloatingInput
                   name="username"
                   type="text"
                   placeholder="Tên đăng nhập"
-                  value={form.username}
-                  onChange={handleChange}
+                  register={register}
+                  label="Tên đăng nhập"
                   disabled={loading}
-                  error={error.includes("username") || error.includes("tên")}
+                  error={errors.username?.message}
                 />
 
                 <FloatingInput
                   name="email"
                   type="email"
                   placeholder="Email"
-                  value={form.email}
-                  onChange={handleChange}
+                  register={register}
+                  label="Email"
                   disabled={loading}
-                  error={error.includes("email") || error.includes("mail")}
+                  error={errors.email?.message}
                 />
 
                 <div className="relative mb-4">
                   <input
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Mật khẩu"
-                    value={form.password}
-                    onChange={handleChange}
+                    {...register("password", {
+                      required: "Mật khẩu là bắt buộc",
+                      minLength: {
+                        value: 8,
+                        message: "Mật khẩu phải có ít nhất 8 ký tự"
+                      }
+                    })}
                     disabled={loading}
                     className={`w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 border-2 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${
-                      error.includes("password") || error.includes("ật")
+                      errors.password
                         ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:focus:ring-red-900/20"
                         : "border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20"
                     } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                   />
                   <label className={`absolute left-4 pointer-events-none transition-all duration-300 ${
-                    form.password.length > 0 ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium" : "top-3.5 text-gray-500 dark:text-gray-400"
+                    password?.length > 0 ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium" : "top-3.5 text-gray-500 dark:text-gray-400"
                   }`}>
                     Mật khẩu
                   </label>
+                  {errors.password && (
+                    <p className="text-red-500 text-xs mt-1 absolute -bottom-5 left-0">{errors.password.message}</p>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -282,10 +281,10 @@ export default function Register() {
                 {/* Password strength indicator */}
                 <div className="space-y-2 mb-4">
                   <div className="flex gap-1">
-                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.password.length >= 1 ? (form.password.length >= 8 ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.password.length >= 3 ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.password.length >= 6 ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.password.length >= 8 ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${password?.length >= 1 ? (password?.length >= 8 ? 'bg-green-500' : 'bg-yellow-500') : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${password?.length >= 3 ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${password?.length >= 6 ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+                    <div className={`h-1 flex-1 rounded-full transition-colors duration-300 ${password?.length >= 8 ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Mật khẩu phải có ít nhất 8 ký tự

@@ -1,11 +1,11 @@
-﻿from django.urls import path, include
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet, WishlistViewSet
 from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
-from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout
+from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout, generate_export_invoices, get_completed_orders_without_invoice
 from orders.api_views import (
     check_schedule_conflict_api,
     calculate_price_api,
@@ -78,4 +78,7 @@ urlpatterns = [
     path("maps/geocode/", geocode_address_api, name="geocode_address"),
     path("maps/distance/", calculate_distance_api, name="calculate_distance"),
     path("maps/distance-from-addresses/", calculate_distance_from_addresses_api, name="distance_from_addresses"),
+    # Hóa đơn xuất
+    path("orders/generate-export-invoices/", generate_export_invoices, name="generate_export_invoices"),
+    path("orders/completed-without-invoice/", get_completed_orders_without_invoice, name="completed_orders_without_invoice"),
 ]

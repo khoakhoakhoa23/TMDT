@@ -10,8 +10,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 import json
 
-from .rag import get_chat_service, get_openai_client
-from .rag.models import DocumentType
+from .chat_service import get_chat_service
+from .openai_client import get_openai_client
+from .models import DocumentType
 
 
 class RAGChatView(APIView):

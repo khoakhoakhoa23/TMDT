@@ -1,80 +1,49 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 
 const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    username: "",
-  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      username: "",
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
-      setFormData({
+      reset({
         first_name: user?.first_name || "",
         last_name: user?.last_name || "",
         email: user?.email || "",
         username: user?.username || "",
       });
-      setError("");
-      setSuccess("");
     } else {
       setIsAnimating(false);
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, reset]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError("");
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
-    setError("");
-    setSuccess("");
-
-    // Validation
-    if (!formData.email) {
-      setError("Email là bắt buộc");
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.username) {
-      setError("Tên đăng nhập là bắt buộc");
-      setLoading(false);
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError("Email không hợp lệ");
-      setLoading(false);
-      return;
-    }
 
     try {
-      const result = await onUpdate(formData);
+      const result = await onUpdate(data);
       if (result.success) {
         setSuccess(result.message);
         setTimeout(() => {
           onClose();
         }, 1500);
       } else {
-        setError(result.message);
+        setSuccess("");
       }
     } catch (err) {
-      setError("Có lỗi xảy ra. Vui lòng thử lại.");
+      setSuccess("");
     } finally {
       setLoading(false);
     }
@@ -111,13 +80,40 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          {errors.first_name && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
               <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.first_name.message}</p>
+            </div>
+          )}
+
+          {errors.last_name && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.last_name.message}</p>
+            </div>
+          )}
+
+          {errors.email && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.email.message}</p>
+            </div>
+          )}
+
+          {errors.username && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.username.message}</p>
             </div>
           )}
 
@@ -136,9 +132,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             </label>
             <input
               type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
+              {...register("first_name")}
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
               placeholder="Nhập họ"
             />
@@ -150,9 +144,7 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             </label>
             <input
               type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
+              {...register("last_name")}
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
               placeholder="Nhập tên"
             />
@@ -164,12 +156,9 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             </label>
             <input
               type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
+              {...register("username", { required: "Tên đăng nhập là bắt buộc" })}
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
               placeholder="Nhập tên đăng nhập"
-              required
             />
           </div>
 
@@ -179,12 +168,15 @@ const EditProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
             </label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              {...register("email", {
+                required: "Email là bắt buộc",
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "Email không hợp lệ"
+                }
+              })}
               className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300"
               placeholder="Nhập email"
-              required
             />
           </div>
 

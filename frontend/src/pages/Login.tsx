@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import authApi from "../api/authApi";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -13,42 +14,35 @@ const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || "";
 const HAS_FACEBOOK_OAUTH = FACEBOOK_APP_ID && FACEBOOK_APP_ID.trim() !== "";
 
 // Floating Input Component với animation
-function FloatingInput({ name, type, placeholder, value, onChange, onBlur, disabled, error }) {
+function FloatingInput({ name, type, placeholder, disabled, error, register, label }) {
   const [isFocused, setIsFocused] = useState(false);
-  const [hasValue, setHasValue] = useState(false);
-
-  useEffect(() => {
-    setHasValue(value && value.length > 0);
-  }, [value]);
 
   return (
     <div className="relative mb-4">
       <input
-        name={name}
+        {...register(name)}
         type={type}
         placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onBlur={(e) => {
-          setIsFocused(false);
-          onBlur && onBlur(e);
-        }}
-        onFocus={() => setIsFocused(true)}
         disabled={disabled}
         className={`w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 border-2 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${
           error
             ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:focus:ring-red-900/20"
             : "border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        onBlur={(e) => {
+          setIsFocused(false);
+          register(name).onBlur(e);
+        }}
+        onFocus={() => setIsFocused(true)}
       />
       <label
         className={`absolute left-4 pointer-events-none transition-all duration-300 ${
-          isFocused || hasValue
+          isFocused
             ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium"
             : "top-3.5 text-gray-500 dark:text-gray-400"
         } ${error ? "text-red-500 dark:text-red-400" : ""}`}
       >
-        {placeholder}
+        {label || placeholder}
       </label>
       {error && (
         <svg className="absolute right-4 top-3.5 w-5 h-5 text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,11 +249,15 @@ export default function Login() {
   const [facebookLoading, setFacebookLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
-  const [form, setForm] = useState({
-    username: "",
-    password: "",
+
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    }
   });
+
+  const formValues = watch();
 
   // Google Login Handler
   const handleGoogleSuccess = async (tokenResponse) => {
@@ -348,18 +346,12 @@ export default function Login() {
     if (token) navigate("/");
   }, [navigate]);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
-  }
-
-  async function handleLogin(e) {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
     setError("");
 
     try {
-      const res = await authApi.login(form);
+      const res = await authApi.login(data);
       if (!res.data || !res.data.access) {
         throw new Error("Invalid response from server");
       }
@@ -430,36 +422,37 @@ export default function Login() {
         <GlassCard className="animate-[fadeInUp_0.6s_ease-out]">
           {error && <ErrorAlert message={error} />}
 
-          <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
             <FloatingInput
               name="username"
               type="text"
               placeholder="Tên đăng nhập"
-              value={form.username}
-              onChange={handleChange}
+              register={register}
+              label="Tên đăng nhập"
               disabled={loading}
-              error={error && !form.username}
+              error={errors.username?.message}
             />
 
             <div className="relative mb-3 sm:mb-4">
               <input
-                name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Mật khẩu"
-                value={form.password}
-                onChange={handleChange}
+                {...register("password", { required: "Mật khẩu là bắt buộc" })}
                 disabled={loading}
                 className={`w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 border-2 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${
-                  error && !form.password
+                  errors.password
                     ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:focus:ring-red-900/20"
                     : "border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20"
                 } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
               />
               <label className={`absolute left-4 pointer-events-none transition-all duration-300 ${
-                form.password.length > 0 ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium" : "top-3.5 text-gray-500 dark:text-gray-400"
+                formValues.password ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium" : "top-3.5 text-gray-500 dark:text-gray-400"
               }`}>
                 Mật khẩu
               </label>
+              {errors.password && (
+                <p className="text-red-500 text-xs mt-1 absolute -bottom-5 left-0">{errors.password.message}</p>
+              )}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}

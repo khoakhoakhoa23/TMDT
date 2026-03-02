@@ -18,10 +18,13 @@ const ImportInvoicesPage = () => {
   const loadInvoices = async () => {
     try {
       const response = await invoiceApi.getImportInvoices();
-      setInvoices(response.data.results || response.data);
-    } catch (error) {
+      const data = response.data;
+      const list = Array.isArray(data) ? data : (data?.results ?? []);
+      setInvoices(list);
+    } catch (error: unknown) {
       console.error("Error loading import invoices:", error);
-      toast.error("Không thể tải danh sách hóa đơn nhập");
+      const msg = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      toast.error(msg || "Không thể tải danh sách hóa đơn nhập. Vui lòng đăng nhập.");
     } finally {
       setLoading(false);
     }
@@ -32,10 +35,10 @@ const ImportInvoicesPage = () => {
     try {
       // Lấy chi tiết hóa đơn
       const detailsResponse = await invoiceApi.getImportInvoiceDetails();
-      const invoiceDetails = detailsResponse.data.results?.filter(
-        detail => detail.hoa_don === invoice.ma_hdn
-      ) || detailsResponse.data.filter(
-        detail => detail.hoa_don === invoice.ma_hdn
+      const detailsData = detailsResponse.data;
+      const detailsList = Array.isArray(detailsData) ? detailsData : (detailsData?.results ?? []);
+      const invoiceDetails = detailsList.filter(
+        (detail: { hoa_don?: string }) => detail.hoa_don === invoice.ma_hdn
       );
       setDetails(invoiceDetails);
     } catch (error) {
@@ -120,10 +123,10 @@ const ImportInvoicesPage = () => {
                     {new Date(invoice.ngay_nhap).toLocaleDateString('vi-VN')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {invoice.nhan_vien || 'N/A'}
+                    {invoice.nhan_vien_name || invoice.nhan_vien || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {invoice.ncc || 'N/A'}
+                    {invoice.ncc_name || invoice.ncc || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button
@@ -174,10 +177,10 @@ const ImportInvoicesPage = () => {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <p><strong>Ngày nhập:</strong> {new Date(selectedInvoice.ngay_nhap).toLocaleDateString('vi-VN')}</p>
-                <p><strong>Nhân viên:</strong> {selectedInvoice.nhan_vien || 'N/A'}</p>
+                <p><strong>Nhân viên:</strong> {selectedInvoice.nhan_vien_name || selectedInvoice.nhan_vien || 'N/A'}</p>
               </div>
               <div>
-                <p><strong>Nhà cung cấp:</strong> {selectedInvoice.ncc || 'N/A'}</p>
+                <p><strong>Nhà cung cấp:</strong> {selectedInvoice.ncc_name || selectedInvoice.ncc || 'N/A'}</p>
               </div>
             </div>
 
@@ -195,7 +198,7 @@ const ImportInvoicesPage = () => {
                 <tbody>
                   {details.map((detail, index) => (
                     <tr key={index} className="border-t">
-                      <td className="px-4 py-2">{detail.xe?.ten_xe || 'N/A'}</td>
+                      <td className="px-4 py-2">{detail.xe_detail?.ten_xe || detail.xe?.ten_xe || 'N/A'}</td>
                       <td className="px-4 py-2 text-center">{detail.so_luong}</td>
                       <td className="px-4 py-2 text-right">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(detail.don_gia || 0)}

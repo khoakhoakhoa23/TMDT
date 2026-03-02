@@ -1,13 +1,8 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 
 const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
-  const [formData, setFormData] = useState({
-    old_password: "",
-    new_password: "",
-    confirm_password: "",
-  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showPasswords, setShowPasswords] = useState({
     old: false,
@@ -16,84 +11,56 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
   });
   const [isAnimating, setIsAnimating] = useState(false);
 
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm({
+    defaultValues: {
+      old_password: "",
+      new_password: "",
+      confirm_password: "",
+    }
+  });
+
+  const newPassword = watch("new_password", "");
+
   useEffect(() => {
     if (isOpen) {
       setIsAnimating(true);
-      setFormData({
+      reset({
         old_password: "",
         new_password: "",
         confirm_password: "",
       });
-      setError("");
-      setSuccess("");
     } else {
       setIsAnimating(false);
     }
-  }, [isOpen]);
+  }, [isOpen, reset]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError("");
-  };
-
-  const validatePassword = (password) => {
-    if (password.length < 8) {
-      return "Mật khẩu phải có ít nhất 8 ký tự";
-    }
-    if (!/(?=.*[a-z])/.test(password)) {
-      return "Mật khẩu phải có ít nhất 1 chữ thường";
-    }
-    if (!/(?=.*[A-Z])/.test(password)) {
-      return "Mật khẩu phải có ít nhất 1 chữ hoa";
-    }
-    if (!/(?=.*[0-9])/.test(password)) {
-      return "Mật khẩu phải có ít nhất 1 số";
-    }
-    return null;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
-    setError("");
-    setSuccess("");
 
-    // Validation
-    if (!formData.old_password || !formData.new_password || !formData.confirm_password) {
-      setError("Vui lòng điền đầy đủ thông tin");
+    if (data.new_password !== data.confirm_password) {
+      setSuccess("");
       setLoading(false);
       return;
     }
 
-    if (formData.new_password !== formData.confirm_password) {
-      setError("Mật khẩu mới và xác nhận mật khẩu không khớp");
-      setLoading(false);
-      return;
-    }
-
-    const passwordError = validatePassword(formData.new_password);
-    if (passwordError) {
-      setError(passwordError);
+    if (data.new_password.length < 8) {
+      setSuccess("");
       setLoading(false);
       return;
     }
 
     try {
-      const result = await onChangePassword(formData);
+      const result = await onChangePassword(data);
       if (result.success) {
         setSuccess(result.message);
         setTimeout(() => {
           onClose();
         }, 1500);
       } else {
-        setError(result.message);
+        setSuccess("");
       }
     } catch (err) {
-      setError("Có lỗi xảy ra. Vui lòng thử lại.");
+      setSuccess("");
     } finally {
       setLoading(false);
     }
@@ -130,13 +97,31 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+          {errors.old_password && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
               <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.old_password.message}</p>
+            </div>
+          )}
+
+          {errors.new_password && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.new_password.message}</p>
+            </div>
+          )}
+
+          {errors.confirm_password && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start animate-[shake_0.5s_ease-in-out]">
+              <svg className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-600 dark:text-red-400 text-sm">{errors.confirm_password.message}</p>
             </div>
           )}
 
@@ -156,12 +141,9 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
             <div className="relative">
               <input
                 type={showPasswords.old ? "text" : "password"}
-                name="old_password"
-                value={formData.old_password}
-                onChange={handleChange}
+                {...register("old_password", { required: "Mật khẩu cũ là bắt buộc" })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập mật khẩu cũ"
-                required
               />
               <button
                 type="button"
@@ -189,12 +171,15 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
             <div className="relative">
               <input
                 type={showPasswords.new ? "text" : "password"}
-                name="new_password"
-                value={formData.new_password}
-                onChange={handleChange}
+                {...register("new_password", {
+                  required: "Mật khẩu mới là bắt buộc",
+                  minLength: {
+                    value: 8,
+                    message: "Mật khẩu phải có ít nhất 8 ký tự"
+                  }
+                })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập mật khẩu mới"
-                required
               />
               <button
                 type="button"
@@ -225,12 +210,13 @@ const ChangePasswordModal = ({ isOpen, onClose, onChangePassword }) => {
             <div className="relative">
               <input
                 type={showPasswords.confirm ? "text" : "password"}
-                name="confirm_password"
-                value={formData.confirm_password}
-                onChange={handleChange}
+                {...register("confirm_password", {
+                  required: "Xác nhận mật khẩu là bắt buộc",
+                  validate: (value) =>
+                    value === newPassword || "Mật khẩu không khớp"
+                })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 dark:bg-gray-700 bg-white dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-300 pr-12"
                 placeholder="Nhập lại mật khẩu mới"
-                required
               />
               <button
                 type="button"

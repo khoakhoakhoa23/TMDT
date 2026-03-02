@@ -1,43 +1,37 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import authApi from "../api/authApi";
 
 // Floating Input Component với animation
-function FloatingInput({ id, name, type, placeholder, value, onChange, disabled, error }) {
+function FloatingInput({ id, name, type, placeholder, disabled, error, register, label }) {
   const [isFocused, setIsFocused] = useState(false);
-  const [hasValue, setHasValue] = useState(false);
-
-  useEffect(() => {
-    setHasValue(value && value.length > 0);
-  }, [value]);
 
   return (
     <div className="relative mb-4">
       <input
         id={id}
-        name={name}
+        {...register(name)}
         type={type}
         placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        onBlur={() => setIsFocused(false)}
-        onFocus={() => setIsFocused(true)}
         disabled={disabled}
         className={`w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 border-2 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none transition-all duration-300 ${
           error
             ? "border-red-400 dark:border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:focus:ring-red-900/20"
             : "border-gray-200 dark:border-gray-600 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/20"
         } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        onBlur={() => setIsFocused(false)}
+        onFocus={() => setIsFocused(true)}
       />
       <label
         htmlFor={id}
         className={`absolute left-4 pointer-events-none transition-all duration-300 ${
-          isFocused || hasValue
+          isFocused
             ? "-top-2.5 text-xs bg-white dark:bg-gray-800 px-2 text-blue-500 dark:text-blue-400 font-medium"
             : "top-3.5 text-gray-500 dark:text-gray-400"
         } ${error ? "text-red-500 dark:text-red-400" : ""}`}
       >
-        {placeholder}
+        {label || placeholder}
       </label>
     </div>
   );
@@ -159,33 +153,23 @@ function BackgroundDecorations() {
 }
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    defaultValues: {
+      email: "",
+    }
+  });
+
+  const onSubmit = async (data) => {
     setLoading(true);
     setError("");
     setSuccess(false);
 
-    if (!email) {
-      setError("Vui lòng nhập email");
-      setLoading(false);
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Email không hợp lệ");
-      setLoading(false);
-      return;
-    }
-
     try {
-      await authApi.requestPasswordReset(email);
+      await authApi.requestPasswordReset(data.email);
       setSuccess(true);
     } catch (err) {
       const errorMessage =
@@ -198,7 +182,6 @@ export default function ForgotPassword() {
   };
 
   const handleBackToLogin = () => {
-    // Sử dụng window.location để đảm bảo navigate hoạt động
     window.location.href = "/login";
   };
 
@@ -230,19 +213,16 @@ export default function ForgotPassword() {
               
               {error && <ErrorAlert message={error} />}
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit(onSubmit)}>
                 <FloatingInput
                   id="email"
                   name="email"
                   type="email"
                   placeholder="Nhập email của bạn"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setError("");
-                  }}
+                  register={register}
+                  label="Email"
                   disabled={loading}
-                  error={error && !email}
+                  error={errors.email?.message}
                 />
 
                 <div className="mt-6">

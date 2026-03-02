@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaSave, FaTimes, FaPlus, FaTrash } from "react-icons/fa";
 import invoiceApi from "../../api/invoiceApi";
@@ -9,16 +10,23 @@ const ImportInvoiceForm = () => {
   const navigate = useNavigate();
   const isEditing = !!ma_hdn;
 
-  const [formData, setFormData] = useState({
-    ma_hdn: "",
-    ngay_nhap: new Date().toISOString().split('T')[0],
-    nhan_vien: "",
-    ncc: ""
-  });
-
-  const [details, setDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+    defaultValues: {
+      ma_hdn: "",
+      ngay_nhap: new Date().toISOString().split('T')[0],
+      nhan_vien: "",
+      ncc: "",
+      details: []
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "details"
+  });
 
   useEffect(() => {
     if (isEditing) {
@@ -32,26 +40,30 @@ const ImportInvoiceForm = () => {
       const response = await invoiceApi.getImportInvoice(ma_hdn);
       const invoice = response.data;
 
-      setFormData({
+      reset({
         ma_hdn: invoice.ma_hdn,
         ngay_nhap: invoice.ngay_nhap,
         nhan_vien: invoice.nhan_vien,
-        ncc: invoice.ncc
+        ncc: invoice.ncc,
+        details: []
       });
 
-      // Load chi tiết
       const detailsResponse = await invoiceApi.getImportInvoiceDetails();
-      const invoiceDetails = detailsResponse.data.results?.filter(
-        detail => detail.hoa_don === ma_hdn
-      ) || detailsResponse.data.filter(
-        detail => detail.hoa_don === ma_hdn
+      const detailsData = detailsResponse.data;
+      const detailsList = Array.isArray(detailsData) ? detailsData : (detailsData?.results ?? []);
+      const invoiceDetails = detailsList.filter(
+        (detail: { hoa_don?: string }) => detail.hoa_don === ma_hdn
       );
-      setDetails(invoiceDetails.map(detail => ({
-        id: detail.id,
-        xe: detail.xe?.ma_xe || detail.xe,
-        so_luong: detail.so_luong,
-        don_gia: detail.don_gia
-      })));
+
+      invoiceDetails.forEach(detail => {
+        const xeObj = detail.xe_detail || detail.xe;
+        append({
+          id: detail.id,
+          xe: xeObj?.ma_xe || xeObj,
+          so_luong: detail.so_luong,
+          don_gia: detail.don_gia
+        });
+      });
     } catch (error) {
       console.error("Error loading invoice:", error);
       toast.error("Không thể tải hóa đơn");
@@ -61,41 +73,21 @@ const ImportInvoiceForm = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const addDetail = () => {
-    setDetails(prev => [...prev, {
+    append({
       xe: "",
       so_luong: 1,
       don_gia: 0
-    }]);
+    });
   };
 
-  const updateDetail = (index, field, value) => {
-    setDetails(prev => prev.map((detail, i) =>
-      i === index ? { ...detail, [field]: value } : detail
-    ));
-  };
-
-  const removeDetail = (index) => {
-    setDetails(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.ma_hdn.trim()) {
+  const onSubmit = async (data) => {
+    if (!data.ma_hdn.trim()) {
       toast.error("Vui lòng nhập mã hóa đơn");
       return;
     }
 
-    if (details.length === 0) {
+    if (data.details.length === 0) {
       toast.error("Vui lòng thêm ít nhất một chi tiết xe");
       return;
     }
@@ -103,12 +95,11 @@ const ImportInvoiceForm = () => {
     try {
       setSaving(true);
 
-      // Tạo/cập nhật hóa đơn
       const invoiceData = {
-        ma_hdn: formData.ma_hdn,
-        ngay_nhap: formData.ngay_nhap,
-        nhan_vien: formData.nhan_vien || null,
-        ncc: formData.ncc || null
+        ma_hdn: data.ma_hdn,
+        ngay_nhap: data.ngay_nhap,
+        nhan_vien: data.nhan_vien || null,
+        ncc: data.ncc || null
       };
 
       if (isEditing) {
@@ -117,25 +108,23 @@ const ImportInvoiceForm = () => {
         await invoiceApi.createImportInvoice(invoiceData);
       }
 
-      // Xử lý chi tiết
-      for (const detail of details) {
+      for (const detail of data.details) {
         if (!detail.xe || detail.so_luong <= 0 || detail.don_gia < 0) {
           toast.error("Vui lòng điền đầy đủ thông tin chi tiết");
+          setSaving(false);
           return;
         }
 
         const detailData = {
-          hoa_don: formData.ma_hdn,
+          hoa_don: data.ma_hdn,
           xe: detail.xe,
           so_luong: parseInt(detail.so_luong),
           don_gia: parseFloat(detail.don_gia)
         };
 
         if (detail.id) {
-          // Update existing detail
           await invoiceApi.updateImportInvoiceDetail(detail.id, detailData);
         } else {
-          // Create new detail (this will auto-increase inventory)
           await invoiceApi.addImportInvoiceDetail(detailData);
         }
       }
@@ -173,7 +162,7 @@ const ImportInvoiceForm = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -181,13 +170,11 @@ const ImportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="ma_hdn"
-              value={formData.ma_hdn}
-              onChange={handleInputChange}
+              {...register("ma_hdn", { required: "Mã hóa đơn là bắt buộc" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
               disabled={isEditing}
             />
+            {errors.ma_hdn && <p className="text-red-500 text-xs mt-1">{errors.ma_hdn.message}</p>}
           </div>
 
           <div>
@@ -196,11 +183,8 @@ const ImportInvoiceForm = () => {
             </label>
             <input
               type="date"
-              name="ngay_nhap"
-              value={formData.ngay_nhap}
-              onChange={handleInputChange}
+              {...register("ngay_nhap", { required: "Ngày nhập là bắt buộc" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
             />
           </div>
 
@@ -210,9 +194,7 @@ const ImportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="nhan_vien"
-              value={formData.nhan_vien}
-              onChange={handleInputChange}
+              {...register("nhan_vien")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="ID nhân viên"
             />
@@ -224,9 +206,7 @@ const ImportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="ncc"
-              value={formData.ncc}
-              onChange={handleInputChange}
+              {...register("ncc")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="ID nhà cung cấp"
             />
@@ -258,26 +238,22 @@ const ImportInvoiceForm = () => {
                 </tr>
               </thead>
               <tbody>
-                {details.map((detail, index) => (
-                  <tr key={index} className="border-t">
+                {fields.map((field, index) => (
+                  <tr key={field.id} className="border-t">
                     <td className="px-4 py-2">
                       <input
                         type="text"
-                        value={detail.xe}
-                        onChange={(e) => updateDetail(index, 'xe', e.target.value)}
+                        {...register(`details.${index}.xe`)}
                         className="w-full px-2 py-1 border border-gray-300 rounded"
                         placeholder="VD: X001"
-                        required
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
                         type="number"
                         min="1"
-                        value={detail.so_luong}
-                        onChange={(e) => updateDetail(index, 'so_luong', parseInt(e.target.value))}
+                        {...register(`details.${index}.so_luong`)}
                         className="w-full px-2 py-1 border border-gray-300 rounded text-center"
-                        required
                       />
                     </td>
                     <td className="px-4 py-2">
@@ -285,21 +261,19 @@ const ImportInvoiceForm = () => {
                         type="number"
                         min="0"
                         step="1000"
-                        value={detail.don_gia}
-                        onChange={(e) => updateDetail(index, 'don_gia', parseFloat(e.target.value))}
+                        {...register(`details.${index}.don_gia`)}
                         className="w-full px-2 py-1 border border-gray-300 rounded text-right"
-                        required
                       />
                     </td>
                     <td className="px-4 py-2 text-right">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                        (detail.don_gia || 0) * (detail.so_luong || 0)
+                        (field.don_gia || 0) * (field.so_luong || 0)
                       )}
                     </td>
                     <td className="px-4 py-2 text-center">
                       <button
                         type="button"
-                        onClick={() => removeDetail(index)}
+                        onClick={() => remove(index)}
                         className="text-red-600 hover:text-red-800"
                         title="Xóa"
                       >
@@ -308,9 +282,9 @@ const ImportInvoiceForm = () => {
                     </td>
                   </tr>
                 ))}
-                {details.length === 0 && (
+                {fields.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                       Chưa có xe nào. Nhấn "Thêm Xe" để bắt đầu.
                     </td>
                   </tr>
