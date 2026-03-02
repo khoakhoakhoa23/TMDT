@@ -14,9 +14,9 @@ try:
     from google import genai
     from google.genai import types
     GEMINI_SDK_AVAILABLE = True
-    print("✅ Google GenAI SDK đã được cài đặt!")
+    print("OK: Google GenAI SDK da duoc cai dat!")
 except ImportError:
-    print("⚠️ Chưa cài đặt google-genai. Cài đặt bằng: pip install google-genai")
+    print("WARNING: Chua cai dat google-genai. Cai dat bang: pip install google-genai")
 
 
 @dataclass

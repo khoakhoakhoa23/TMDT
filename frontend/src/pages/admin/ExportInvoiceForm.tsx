@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaSave, FaTimes, FaPlus, FaTrash } from "react-icons/fa";
 import invoiceApi from "../../api/invoiceApi";
@@ -9,16 +10,23 @@ const ExportInvoiceForm = () => {
   const navigate = useNavigate();
   const isEditing = !!ma_hdx;
 
-  const [formData, setFormData] = useState({
-    ma_hdx: "",
-    ngay: new Date().toISOString().split('T')[0],
-    nhan_vien: "",
-    khach_hang: ""
-  });
-
-  const [details, setDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      ma_hdx: "",
+      ngay: new Date().toISOString().split('T')[0],
+      nhan_vien: "",
+      khach_hang: "",
+      details: []
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "details"
+  });
 
   useEffect(() => {
     if (isEditing) {
@@ -32,25 +40,29 @@ const ExportInvoiceForm = () => {
       const response = await invoiceApi.getExportInvoice(ma_hdx);
       const invoice = response.data;
 
-      setFormData({
+      reset({
         ma_hdx: invoice.ma_hdx,
         ngay: invoice.ngay,
         nhan_vien: invoice.nhan_vien,
-        khach_hang: invoice.khach_hang
+        khach_hang: invoice.khach_hang,
+        details: []
       });
 
-      // Load chi tiết
       const detailsResponse = await invoiceApi.getExportInvoiceDetails();
-      const invoiceDetails = detailsResponse.data.results?.filter(
-        detail => detail.hoa_don === ma_hdx
-      ) || detailsResponse.data.filter(
-        detail => detail.hoa_don === ma_hdx
+      const detailsData = detailsResponse.data;
+      const detailsList = Array.isArray(detailsData) ? detailsData : (detailsData?.results ?? []);
+      const invoiceDetails = detailsList.filter(
+        (detail: { hoa_don?: string }) => detail.hoa_don === ma_hdx
       );
-      setDetails(invoiceDetails.map(detail => ({
-        id: detail.id,
-        xe: detail.xe?.ma_xe || detail.xe,
-        so_luong: detail.so_luong
-      })));
+
+      invoiceDetails.forEach(detail => {
+        const xeObj = detail.xe_detail || detail.xe;
+        append({
+          id: detail.id,
+          xe: xeObj?.ma_xe || xeObj,
+          so_luong: detail.so_luong
+        });
+      });
     } catch (error) {
       console.error("Error loading invoice:", error);
       toast.error("Không thể tải hóa đơn");
@@ -60,40 +72,20 @@ const ExportInvoiceForm = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   const addDetail = () => {
-    setDetails(prev => [...prev, {
+    append({
       xe: "",
       so_luong: 1
-    }]);
+    });
   };
 
-  const updateDetail = (index, field, value) => {
-    setDetails(prev => prev.map((detail, i) =>
-      i === index ? { ...detail, [field]: value } : detail
-    ));
-  };
-
-  const removeDetail = (index) => {
-    setDetails(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.ma_hdx.trim()) {
+  const onSubmit = async (data) => {
+    if (!data.ma_hdx.trim()) {
       toast.error("Vui lòng nhập mã hóa đơn");
       return;
     }
 
-    if (details.length === 0) {
+    if (data.details.length === 0) {
       toast.error("Vui lòng thêm ít nhất một chi tiết xe");
       return;
     }
@@ -101,12 +93,11 @@ const ExportInvoiceForm = () => {
     try {
       setSaving(true);
 
-      // Tạo/cập nhật hóa đơn
       const invoiceData = {
-        ma_hdx: formData.ma_hdx,
-        ngay: formData.ngay,
-        nhan_vien: formData.nhan_vien || null,
-        khach_hang: formData.khach_hang || null
+        ma_hdx: data.ma_hdx,
+        ngay: data.ngay,
+        nhan_vien: data.nhan_vien || null,
+        khach_hang: data.khach_hang || null
       };
 
       if (isEditing) {
@@ -115,24 +106,22 @@ const ExportInvoiceForm = () => {
         await invoiceApi.createExportInvoice(invoiceData);
       }
 
-      // Xử lý chi tiết
-      for (const detail of details) {
+      for (const detail of data.details) {
         if (!detail.xe || detail.so_luong <= 0) {
           toast.error("Vui lòng điền đầy đủ thông tin chi tiết");
+          setSaving(false);
           return;
         }
 
         const detailData = {
-          hoa_don: formData.ma_hdx,
+          hoa_don: data.ma_hdx,
           xe: detail.xe,
           so_luong: parseInt(detail.so_luong)
         };
 
         if (detail.id) {
-          // Update existing detail
           await invoiceApi.updateExportInvoiceDetail(detail.id, detailData);
         } else {
-          // Create new detail (this will auto-decrease inventory)
           await invoiceApi.addExportInvoiceDetail(detailData);
         }
       }
@@ -170,7 +159,7 @@ const ExportInvoiceForm = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-lg shadow-md p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -178,13 +167,11 @@ const ExportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="ma_hdx"
-              value={formData.ma_hdx}
-              onChange={handleInputChange}
+              {...register("ma_hdx", { required: "Mã hóa đơn là bắt buộc" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              required
               disabled={isEditing}
             />
+            {errors.ma_hdx && <p className="text-red-500 text-xs mt-1">{errors.ma_hdx.message}</p>}
           </div>
 
           <div>
@@ -193,11 +180,8 @@ const ExportInvoiceForm = () => {
             </label>
             <input
               type="date"
-              name="ngay"
-              value={formData.ngay}
-              onChange={handleInputChange}
+              {...register("ngay", { required: "Ngày xuất là bắt buộc" })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              required
             />
           </div>
 
@@ -207,9 +191,7 @@ const ExportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="nhan_vien"
-              value={formData.nhan_vien}
-              onChange={handleInputChange}
+              {...register("nhan_vien")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="ID nhân viên"
             />
@@ -221,9 +203,7 @@ const ExportInvoiceForm = () => {
             </label>
             <input
               type="text"
-              name="khach_hang"
-              value={formData.khach_hang}
-              onChange={handleInputChange}
+              {...register("khach_hang")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="ID khách hàng"
             />
@@ -253,32 +233,28 @@ const ExportInvoiceForm = () => {
                 </tr>
               </thead>
               <tbody>
-                {details.map((detail, index) => (
-                  <tr key={index} className="border-t">
+                {fields.map((field, index) => (
+                  <tr key={field.id} className="border-t">
                     <td className="px-4 py-2">
                       <input
                         type="text"
-                        value={detail.xe}
-                        onChange={(e) => updateDetail(index, 'xe', e.target.value)}
+                        {...register(`details.${index}.xe`)}
                         className="w-full px-2 py-1 border border-gray-300 rounded"
                         placeholder="VD: X001"
-                        required
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
                         type="number"
                         min="1"
-                        value={detail.so_luong}
-                        onChange={(e) => updateDetail(index, 'so_luong', parseInt(e.target.value))}
+                        {...register(`details.${index}.so_luong`)}
                         className="w-full px-2 py-1 border border-gray-300 rounded text-center"
-                        required
                       />
                     </td>
                     <td className="px-4 py-2 text-center">
                       <button
                         type="button"
-                        onClick={() => removeDetail(index)}
+                        onClick={() => remove(index)}
                         className="text-red-600 hover:text-red-800"
                         title="Xóa"
                       >
@@ -287,9 +263,9 @@ const ExportInvoiceForm = () => {
                     </td>
                   </tr>
                 ))}
-                {details.length === 0 && (
+                {fields.length === 0 && (
                   <tr>
-                    <td colSpan="3" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
                       Chưa có xe nào. Nhấn "Thêm Xe" để bắt đầu.
                     </td>
                   </tr>

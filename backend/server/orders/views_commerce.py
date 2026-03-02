@@ -1,14 +1,15 @@
-﻿import logging
+import logging
 logger = logging.getLogger(__name__)
 
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 
-from orders.models import Cart, CartItem, Order, OrderItem, Coupon
+from orders.models import Cart, CartItem, Order, OrderItem, Coupon, HoaDonXuat, ChiTietHDX
 from products.models import Xe
 from orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
 from decimal import Decimal
@@ -148,6 +149,56 @@ class OrderViewSet(viewsets.ModelViewSet):
                 instance.total_price = instance.base_price + instance.delivery_fee + instance.pickup_fee + instance.additional_fee - instance.discount_amount + new_late_fee
                 instance.save()
 
+        # Nếu status được set thành "completed", tự động tạo hóa đơn xuất (không làm fail cập nhật đơn hàng)
+        if new_status == "completed" and old_status != "completed":
+            with transaction.atomic():
+                # Lưu order trước
+                self.perform_update(serializer)
+                instance.refresh_from_db()
+                
+                # Tự động tạo hóa đơn xuất (bắt mọi lỗi để không trả 500)
+                try:
+                    from datetime import datetime
+                    from users.models import KhachHang, NhanVien
+
+                    # Format ngắn: HDX{MM}{DD}{HHMM}{id} -> tối đa 10 ký tự
+                    now = datetime.now()
+                    ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{instance.id:03d}"  # VD: HDX0302113017 = 10 ký tự
+                    
+                    if HoaDonXuat.objects.filter(ma_hdx=ma_hdx).exists():
+                        logger.info(f"Hóa đơn xuất {ma_hdx} đã tồn tại cho đơn hàng #{instance.id}")
+                    else:
+                        # KhachHang model có thể không có trường user; dùng bản ghi đầu tiên nếu cần
+                        khach_hang = None
+                        try:
+                            if hasattr(KhachHang, 'user_id'):
+                                khach_hang = KhachHang.objects.filter(user_id=instance.user_id).first()
+                            if not khach_hang:
+                                khach_hang = KhachHang.objects.first()
+                        except Exception:
+                            khach_hang = KhachHang.objects.first()
+
+                        nhan_vien = NhanVien.objects.first()
+                        if khach_hang and nhan_vien:
+                            hoa_don_xuat = HoaDonXuat.objects.create(
+                                ma_hdx=ma_hdx,
+                                ngay=timezone.now().date(),
+                                nhan_vien=nhan_vien,
+                                khach_hang=khach_hang
+                            )
+                            for item in instance.items.all():
+                                ChiTietHDX.objects.create(
+                                    hoa_don=hoa_don_xuat,
+                                    xe=item.xe,
+                                    so_luong=item.quantity
+                                )
+                            logger.info(f"Đã tự động tạo hóa đơn xuất {ma_hdx} cho đơn hàng #{instance.id}")
+                        else:
+                            logger.info("Bỏ qua tạo hóa đơn xuất: thiếu KhachHang hoặc NhanVien trong DB.")
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Không thể tạo hóa đơn xuất tự động: {str(e)}")
+        
         # Nếu status được set thành "paid", tự động cập nhật payment_status và payment
         if new_status == "paid" and instance.status != "paid":
             with transaction.atomic():
@@ -189,8 +240,6 @@ class OrderViewSet(viewsets.ModelViewSet):
                     logger.warning(f"Không thể cập nhật payment status: {str(e)}")
         else:
             self.perform_update(serializer)
-        
-        # Tạo notification khi order status thay đổi
         if old_status != new_status:
             try:
                 from core.notifications import create_order_status_notification
@@ -511,3 +560,157 @@ def checkout(request):
     if payment_response:
         serialized_order["payment"] = payment_response
     return Response(serialized_order, status=status.HTTP_201_CREATED)
+
+
+# ==================== API tạo hóa đơn xuất cho đơn hàng đã hoàn thành ====================
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def generate_export_invoices(request):
+    """
+    API tạo hóa đơn xuất cho tất cả đơn hàng đã hoàn thành nhưng chưa có hóa đơn xuất.
+    Tự động tạo KhachHang và NhanVien mẫu nếu chưa có.
+    """
+    from datetime import datetime
+    from django.db.models import Q
+    
+    # Lấy tất cả đơn hàng đã hoàn thành
+    completed_orders = Order.objects.filter(status="completed").prefetch_related("items")
+    
+    if not completed_orders.exists():
+        return Response({
+            "message": "Không có đơn hàng nào đã hoàn thành.",
+            "created": 0,
+            "skipped": 0
+        })
+    
+    # Lấy danh sách mã hóa đơn xuất đã tồn tại
+    existing_hdx_codes = set(HoaDonXuat.objects.values_list("ma_hdx", flat=True))
+    
+    # Lấy hoặc tạo KhachHang và NhanVien
+    from users.models import KhachHang, NhanVien
+    khach_hangs = list(KhachHang.objects.all())
+    nhan_viens = list(NhanVien.objects.all())
+    
+    # Tự động tạo dữ liệu mẫu nếu chưa có
+    if not khach_hangs:
+        khach_hang = KhachHang.objects.create(
+            ma_kh="KH001",
+            ten="Khách Hàng Mẫu",
+            sdt="0123456789",
+            dia_chi="Hồ Chí Minh"
+        )
+        khach_hangs = [khach_hang]
+        logger.info("Đã tự động tạo KhachHang mẫu")
+    
+    if not nhan_viens:
+        nhan_vien = NhanVien.objects.create(
+            ma_nv="NV001",
+            ten="Nhân Viên Mẫu",
+            sdt="0987654321",
+            dia_chi="Hồ Chí Minh",
+            gioi_tinh="Nam",
+            ngay_sinh="1990-01-01",
+            chuc_vu="Nhân viên kinh doanh"
+        )
+        nhan_viens = [nhan_vien]
+        logger.info("Đã tự động tạo NhanVien mẫu")
+    
+    created = 0
+    skipped = 0
+    now = datetime.now()
+    
+    for order in completed_orders:
+        # Tạo mã hóa đơn
+        ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{order.id:03d}"
+        
+        # Bỏ qua nếu đã tồn tại
+        if ma_hdx in existing_hdx_codes:
+            skipped += 1
+            continue
+        
+        # Tạo hóa đơn xuất
+        try:
+            khach_hang = khach_hangs[0]  # Lấy khách hàng đầu tiên
+            nhan_vien = nhan_viens[0]    # Lấy nhân viên đầu tiên
+            
+            hoa_don_xuat = HoaDonXuat.objects.create(
+                ma_hdx=ma_hdx,
+                ngay=now.date(),
+                nhan_vien=nhan_vien,
+                khach_hang=khach_hang
+            )
+            
+            # Tạo chi tiết hóa đơn
+            for item in order.items.all():
+                ChiTietHDX.objects.create(
+                    hoa_don=hoa_don_xuat,
+                    xe=item.xe,
+                    so_luong=item.quantity
+                )
+            
+            existing_hdx_codes.add(ma_hdx)
+            created += 1
+            logger.info(f"Đã tạo hóa đơn xuất {ma_hdx} cho đơn hàng #{order.id}")
+        except Exception as e:
+            skipped += 1
+            logger.warning(f"Lỗi khi tạo hóa đơn cho đơn hàng #{order.id}: {str(e)}")
+    
+    return Response({
+        "message": f"Hoàn tất! Đã tạo {created} hóa đơn xuất, bỏ qua {skipped} đơn hàng.",
+        "created": created,
+        "skipped": skipped
+    })
+
+
+# ==================== API lấy danh sách đơn hàng đã hoàn thành chưa có hóa đơn ====================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def get_completed_orders_without_invoice(request):
+    """
+    API lấy danh sách đơn hàng đã hoàn thành nhưng chưa có hóa đơn xuất.
+    """
+    from datetime import datetime
+    from users.models import KhachHang, NhanVien
+    
+    # Lấy tất cả đơn hàng đã hoàn thành
+    completed_orders = Order.objects.filter(status="completed").prefetch_related("items", "user")
+    
+    if not completed_orders.exists():
+        return Response({
+            "message": "Không có đơn hàng nào đã hoàn thành.",
+            "orders": []
+        })
+    
+    # Lấy danh sách mã hóa đơn xuất đã tồn tại
+    existing_hdx_codes = set(HoaDonXuat.objects.values_list("ma_hdx", flat=True))
+    
+    now = datetime.now()
+    orders_without_invoice = []
+    
+    for order in completed_orders:
+        # Tạo mã hóa đơn dự kiến
+        ma_hdx = f"HDX{now.strftime('%m%d%H%M')}{order.id:03d}"
+        
+        if ma_hdx not in existing_hdx_codes:
+            orders_without_invoice.append({
+                "id": order.id,
+                "user": order.user.username if order.user else "Unknown",
+                "created_at": order.created_at,
+                "total_price": str(order.total_price),
+                "status": order.status,
+                "expected_ma_hdx": ma_hdx
+            })
+    
+    # Kiểm tra và thông báo về tình trạng KhachHang/NhanVien
+    khach_hangs = KhachHang.objects.count()
+    nhan_viens = NhanVien.objects.count()
+    
+    return Response({
+        "total_completed_orders": completed_orders.count(),
+        "orders_without_invoice_count": len(orders_without_invoice),
+        "has_khachhang": khach_hangs > 0,
+        "has_nhanvien": nhan_viens > 0,
+        "orders": orders_without_invoice
+    })

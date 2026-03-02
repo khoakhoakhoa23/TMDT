@@ -1,36 +1,26 @@
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 
 const RentalForm = ({ car, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    startDate: "",
-    endDate: "",
-    pickupLocation: "",
-    returnLocation: "",
-    additionalServices: [],
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      startDate: "",
+      endDate: "",
+      pickupLocation: "",
+      returnLocation: "",
+      additionalServices: [],
+    }
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleCheckboxChange = (service) => {
-    const services = formData.additionalServices.includes(service)
-      ? formData.additionalServices.filter((s) => s !== service)
-      : [...formData.additionalServices, service];
-    setFormData({ ...formData, additionalServices: services });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
+  const formValues = watch();
+  const startDate = formValues.startDate;
+  const endDate = formValues.endDate;
+  const additionalServices = formValues.additionalServices || [];
 
   const calculateDays = () => {
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-      const diffTime = Math.abs(end - start);
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays || 0;
     }
@@ -41,8 +31,20 @@ const RentalForm = ({ car, onSubmit }) => {
   const price = car?.gia_thue || car?.gia_khuyen_mai || car?.gia || 0;
   const totalPrice = days * price;
 
+  const onSubmitForm = (data) => {
+    onSubmit(data);
+  };
+
+  const handleCheckboxChange = (service) => {
+    const currentServices = additionalServices || [];
+    const services = currentServices.includes(service)
+      ? currentServices.filter((s) => s !== service)
+      : [...currentServices, service];
+    return services;
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
+    <form onSubmit={handleSubmit(onSubmitForm)} className="bg-white p-6 rounded-lg shadow-md">
       <h3 className="text-xl font-semibold mb-4">Thông tin thuê xe</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -52,12 +54,10 @@ const RentalForm = ({ car, onSubmit }) => {
           </label>
           <input
             type="date"
-            name="startDate"
-            value={formData.startDate}
-            onChange={handleChange}
-            required
+            {...register("startDate", { required: "Ngày bắt đầu là bắt buộc" })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
         </div>
 
         <div>
@@ -66,13 +66,11 @@ const RentalForm = ({ car, onSubmit }) => {
           </label>
           <input
             type="date"
-            name="endDate"
-            value={formData.endDate}
-            onChange={handleChange}
-            required
-            min={formData.startDate}
+            {...register("endDate", { required: "Ngày kết thúc là bắt buộc" })}
+            min={startDate}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
         </div>
       </div>
 
@@ -83,13 +81,11 @@ const RentalForm = ({ car, onSubmit }) => {
           </label>
           <input
             type="text"
-            name="pickupLocation"
-            value={formData.pickupLocation}
-            onChange={handleChange}
-            required
+            {...register("pickupLocation", { required: "Điểm nhận xe là bắt buộc" })}
             placeholder="Nhập địa chỉ nhận xe"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.pickupLocation && <p className="text-red-500 text-xs mt-1">{errors.pickupLocation.message}</p>}
         </div>
 
         <div>
@@ -98,13 +94,11 @@ const RentalForm = ({ car, onSubmit }) => {
           </label>
           <input
             type="text"
-            name="returnLocation"
-            value={formData.returnLocation}
-            onChange={handleChange}
-            required
+            {...register("returnLocation", { required: "Điểm trả xe là bắt buộc" })}
             placeholder="Nhập địa chỉ trả xe"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {errors.returnLocation && <p className="text-red-500 text-xs mt-1">{errors.returnLocation.message}</p>}
         </div>
       </div>
 
@@ -117,8 +111,8 @@ const RentalForm = ({ car, onSubmit }) => {
             <label key={service} className="flex items-center">
               <input
                 type="checkbox"
-                checked={formData.additionalServices.includes(service)}
-                onChange={() => handleCheckboxChange(service)}
+                value={service}
+                {...register("additionalServices")}
                 className="mr-2"
               />
               <span className="text-sm">{service}</span>

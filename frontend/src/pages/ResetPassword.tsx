@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import authApi from "../api/authApi";
 
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    new_password: "",
-    confirm_password: "",
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -17,61 +14,40 @@ export default function ResetPassword() {
     confirm: false,
   });
 
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      new_password: "",
+      confirm_password: "",
+    }
+  });
+
+  const newPassword = watch("new_password", "");
+
   useEffect(() => {
     if (!token) {
       setError("Token không hợp lệ");
     }
   }, [token]);
 
-  const validatePassword = (password) => {
-    if (password.length < 8) {
-      return "Mật khẩu phải có ít nhất 8 ký tự";
-    }
-    return null;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError("");
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
     setError("");
 
-    // Validation
-    if (!formData.new_password || !formData.confirm_password) {
-      setError("Vui lòng điền đầy đủ thông tin");
-      setLoading(false);
-      return;
-    }
-
-    if (formData.new_password !== formData.confirm_password) {
+    if (data.new_password !== data.confirm_password) {
       setError("Mật khẩu mới và xác nhận mật khẩu không khớp");
       setLoading(false);
       return;
     }
 
-    const passwordError = validatePassword(formData.new_password);
-    if (passwordError) {
-      setError(passwordError);
+    if (data.new_password.length < 8) {
+      setError("Mật khẩu phải có ít nhất 8 ký tự");
       setLoading(false);
       return;
     }
 
     try {
-      await authApi.resetPassword(
-        token,
-        formData.new_password,
-        formData.confirm_password
-      );
+      await authApi.resetPassword(token, data.new_password, data.confirm_password);
       setSuccess(true);
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -132,7 +108,7 @@ export default function ResetPassword() {
             </p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {error && (
               <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded transition-colors duration-300">
                 {error}
@@ -149,12 +125,15 @@ export default function ResetPassword() {
               <div className="relative">
                 <input
                   id="new_password"
-                  name="new_password"
                   type={showPasswords.new ? "text" : "password"}
                   autoComplete="new-password"
-                  required
-                  value={formData.new_password}
-                  onChange={handleChange}
+                  {...register("new_password", {
+                    required: "Mật khẩu mới là bắt buộc",
+                    minLength: {
+                      value: 8,
+                      message: "Mật khẩu phải có ít nhất 8 ký tự"
+                    }
+                  })}
                   className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-300"
                   placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)"
                 />
@@ -215,12 +194,11 @@ export default function ResetPassword() {
               <div className="relative">
                 <input
                   id="confirm_password"
-                  name="confirm_password"
                   type={showPasswords.confirm ? "text" : "password"}
                   autoComplete="new-password"
-                  required
-                  value={formData.confirm_password}
-                  onChange={handleChange}
+                  {...register("confirm_password", {
+                    required: "Xác nhận mật khẩu là bắt buộc",
+                  })}
                   className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-gray-700 transition-colors duration-300"
                   placeholder="Nhập lại mật khẩu mới"
                 />

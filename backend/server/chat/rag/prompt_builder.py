@@ -13,49 +13,65 @@ class PromptBuilder:
     Xay dung Prompt theo yeu cau RAG
     """
     
-    # System prompt
-    SYSTEM_PROMPT = """Ban la chatbot tu van ban va cho thue xe cua TMDT.
+    # System prompt - Cải thiện với instructions rõ ràng hơn
+    SYSTEM_PROMPT = """Bạn là chatbot tư vấn bán và cho thuê xe của TMDT - một nhân viên tư vấn chuyên nghiệp, thân thiện và nhiệt tình.
 
-QUY TAC:
-- Chi duoc tra loi dua tren du lieu duoc cung cap
-- Khong du doan, khong bia
-- Neu thieu thong tin, tra loi: 
-  "Em chua co thong tin chinh xac, em se chuyen anh/chi sang tuyen vien."
+VAI TRÒ CỦA BẠN:
+- Tư vấn khách hàng về các sản phẩm xe và dịch vụ cho thuê
+- Giải đáp thắc mắc về chính sách, giá cả, thủ tục
+- Hỗ trợ khách hàng tìm xe phù hợp với nhu cầu
+- Tạo trải nghiệm tích cực và chuyên nghiệp
+
+QUY TẮC TRẢ LỜI:
+1. CHỈ trả lời dựa trên thông tin được cung cấp trong phần DU LIEU LIEN QUAN bên dưới
+2. KHÔNG được bịa đặt, suy đoán hoặc tạo thông tin không có trong dữ liệu
+3. Nếu không có thông tin chính xác, hãy thành thật và đề xuất chuyển sang tư vấn viên
+4. Sử dụng ngôn ngữ tự nhiên, thân thiện nhưng chuyên nghiệp
+5. Trả lời ngắn gọn, rõ ràng, dễ hiểu (2-4 câu)
+6. Luôn kết thúc với Call-to-Action phù hợp (đặt xe, để lại số điện thoại, gọi hotline)
+
+TONE VÀ PHONG CÁCH:
+- Thân thiện, nhiệt tình nhưng không quá suồng sã
+- Chuyên nghiệp nhưng không cứng nhắc
+- Sử dụng "em" khi xưng hô với khách hàng
+- Sử dụng "anh/chị" khi gọi khách hàng
+- Tránh tiết lộ bạn là AI hoặc bot
 
 DU LIEU LIEN QUAN:
 {retrieved_context}
 
-CAU HOI KHACH:
+CAU HOI KHACH HANG:
 {user_question}
 
-YEU CAU TRA LOI:
-- Ngan gon
-- Ro rang
-- Tieng Viet
-- Giong tu van chuyen nghiep
-- Co CTA (dat xe, de lai SDT hoac goi hotline)
-- Khong tiet lo rang ban la AI hoac su dung du lieu tu database"""
+LỊCH SỬ CUỘC TRÒ CHUYỆN:
+{conversation_context}
+
+Hãy trả lời câu hỏi của khách hàng một cách tự nhiên, chuyên nghiệp và hữu ích nhất có thể."""
     
-    # Template dinh dang context
+    # Template định dạng context - Cải thiện với metadata quan trọng
     CONTEXT_TEMPLATES = {
-        DocumentType.CAR: """### THONG TIN XE ###
-Tieu de: {title}
-Noi dung:
+        DocumentType.CAR: """### THÔNG TIN XE ###
+Tên xe: {title}
+{metadata_info}
+Nội dung chi tiết:
 {content}
 ---""",
-        DocumentType.POLICY: """### CHINH SACH ###
-Tieu de: {title}
-Noi dung:
+        DocumentType.POLICY: """### CHÍNH SÁCH ###
+Tiêu đề: {title}
+{metadata_info}
+Nội dung:
 {content}
 ---""",
-        DocumentType.FAQ: """### CAU HOI THUONG GAP ###
-Tieu de: {title}
-Noi dung:
+        DocumentType.FAQ: """### CÂU HỎI THƯỜNG GẶP ###
+Câu hỏi: {title}
+{metadata_info}
+Câu trả lời:
 {content}
 ---""",
-        DocumentType.GENERAL: """### THONG TIN CHUNG ###
-Tieu de: {title}
-Noi dung:
+        DocumentType.GENERAL: """### THÔNG TIN CHUNG ###
+Tiêu đề: {title}
+{metadata_info}
+Nội dung:
 {content}
 ---""",
     }
@@ -100,37 +116,42 @@ Noi dung:
         self,
         user_question: str,
         documents: List[Document],
-        conversation_history: List[Dict] = None
+        conversation_history: List[Dict] = None,
+        context: Dict[str, Any] = None
     ) -> List[Dict[str, str]]:
         """
-        Xay dung danh sach prompt hoan chinh
+        Xây dựng danh sách prompt hoàn chỉnh
         
         Args:
-            user_question: Cau hoi nguoi dung
-            documents: Danh sach tai lieu tim duoc
-            conversation_history: Lich su cuoc tro chuyen
+            user_question: Câu hỏi người dùng
+            documents: Danh sách tài liệu tìm được
+            conversation_history: Lịch sử cuộc trò chuyện
+            context: Thông tin bổ sung về request
             
         Returns:
-            Danh sach tin nhan (co the su dung cho OpenAI API)
+            Danh sách tin nhắn (có thể sử dụng cho OpenAI API)
         """
         messages = []
         
-        # Xay dung tin nhan he thong
-        system_message = self._build_system_message(documents, user_question)
+        # Xây dựng tin nhắn hệ thống với context và conversation history
+        system_message = self._build_system_message(
+            documents, 
+            user_question, 
+            conversation_history
+        )
         messages.append({
             "role": "system",
             "content": system_message
         })
         
-        # Them lich su cuoc tro chuyen (neu co)
+        # Thêm lịch sử cuộc trò chuyện (nếu có) - tối đa 6 tin nhắn gần nhất
         if conversation_history:
-            for msg in conversation_history[-5:]:  # Su dung toi da 5 cuoc tro chuyen gan nhat
-                messages.append({
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                })
+            # Lọc và format lại conversation history
+            formatted_history = self._format_conversation_history(conversation_history[-6:])
+            for msg in formatted_history:
+                messages.append(msg)
         
-        # Them cau hoi nguoi dung
+        # Thêm câu hỏi người dùng
         messages.append({
             "role": "user",
             "content": user_question
@@ -138,61 +159,131 @@ Noi dung:
         
         return messages
     
+    def _format_conversation_history(self, history: List[Dict]) -> List[Dict[str, str]]:
+        """
+        Format lại conversation history để phù hợp với API
+        
+        Args:
+            history: Lịch sử cuộc trò chuyện
+            
+        Returns:
+            Danh sách tin nhắn đã format
+        """
+        formatted = []
+        for msg in history:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            # Chuyển đổi role cho phù hợp với API
+            if role == "assistant":
+                role = "assistant"
+            elif role == "model":  # Gemini format
+                role = "assistant"
+            else:
+                role = "user"
+            
+            if content.strip():
+                formatted.append({
+                    "role": role,
+                    "content": content
+                })
+        
+        return formatted
+    
     def _build_system_message(
         self,
         documents: List[Document],
-        user_question: str
+        user_question: str,
+        conversation_history: List[Dict] = None
     ) -> str:
         """
-        Xay dung tin nhan he thong
+        Xây dựng tin nhắn hệ thống
         
         Args:
-            documents: Tai lieu tim duoc
-            user_question: Cau hoi nguoi dung
+            documents: Tài liệu tìm được
+            user_question: Câu hỏi người dùng
+            conversation_history: Lịch sử cuộc trò chuyện
             
         Returns:
-            Noi dung tin nhan he thong
+            Nội dung tin nhắn hệ thống
         """
-        # Xay dung context
+        # Xây dựng context từ documents
         if documents:
             context = self._format_context(documents)
         else:
-            context = "Khong co du lieu lien quan trong he thong."
+            context = "KHÔNG có dữ liệu liên quan trong hệ thống. Hãy thành thật với khách hàng và đề xuất chuyển sang tư vấn viên."
         
-        # Dien vao template
+        # Format conversation context
+        conv_context = "Chưa có lịch sử trò chuyện trước đó."
+        if conversation_history and len(conversation_history) > 0:
+            # Tóm tắt ngắn gọn conversation history
+            recent_msgs = conversation_history[-4:]  # Lấy 4 tin nhắn gần nhất
+            conv_parts = []
+            for msg in recent_msgs:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")[:100]  # Giới hạn độ dài
+                if role == "user":
+                    conv_parts.append(f"Khách: {content}")
+                elif role in ["assistant", "model"]:
+                    conv_parts.append(f"Bot: {content}")
+            conv_context = "\n".join(conv_parts)
+        
+        # Điền vào template
         system_message = self.system_prompt.format(
             retrieved_context=context,
-            user_question=user_question
+            user_question=user_question,
+            conversation_context=conv_context
         )
         
         return system_message
     
     def _format_context(self, documents: List[Document]) -> str:
         """
-        Din Dang dang tai lieu tim duoc thanh context
+        Định dạng tài liệu tìm được thành context
         
         Args:
-            documents: Danh sach tai lieu
+            documents: Danh sách tài liệu
             
         Returns:
-            Chuoi context da dinh dang
+            Chuỗi context đã định dạng
         """
         if not documents:
-            return "Khong co du lieu lien quan."
+            return "Không có dữ liệu liên quan."
         
         formatted_parts = []
         
-        for doc in documents:
+        for idx, doc in enumerate(documents, 1):
             template = self.CONTEXT_TEMPLATES.get(
                 doc.doc_type,
                 self.CONTEXT_TEMPLATES[DocumentType.GENERAL]
             )
             
+            # Format metadata info cho xe
+            metadata_info = ""
+            if doc.doc_type == DocumentType.CAR and doc.metadata:
+                meta_parts = []
+                if doc.metadata.get("gia_thue"):
+                    meta_parts.append(f"Giá thuê: {doc.metadata.get('gia_thue'):,} VNĐ/ngày")
+                if doc.metadata.get("gia_ban"):
+                    meta_parts.append(f"Giá bán: {doc.metadata.get('gia_ban'):,} VNĐ")
+                if doc.metadata.get("loai_xe"):
+                    meta_parts.append(f"Loại xe: {doc.metadata.get('loai_xe')}")
+                if doc.metadata.get("trang_thai"):
+                    meta_parts.append(f"Trạng thái: {doc.metadata.get('trang_thai')}")
+                if meta_parts:
+                    metadata_info = "\n".join(meta_parts) + "\n"
+            
+            # Giới hạn độ dài content để tránh prompt quá dài
+            content = doc.content
+            if len(content) > 800:
+                content = content[:800] + "..."
+            
             formatted_parts.append(
                 template.format(
                     title=doc.title,
-                    content=doc.content,
-                    metadata=doc.metadata
+                    content=content,
+                    metadata=doc.metadata,
+                    metadata_info=metadata_info
                 )
             )
         

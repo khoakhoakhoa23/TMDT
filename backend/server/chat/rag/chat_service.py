@@ -15,7 +15,14 @@ from .retrieval import RetrievalService, get_retrieval_service
 from .prompt_builder import PromptBuilder, get_prompt_builder
 from .openai_client import OpenAIClient, get_openai_client
 from .gemini_client import GeminiClient, get_gemini_client
-from .groq_client import GroqClient, get_groq_client
+# Import Groq với try-except để không crash khi module không có
+try:
+    from .groq_client import GroqClient, get_groq_client
+    GROQ_AVAILABLE = True
+except ImportError:
+    GroqClient = None
+    get_groq_client = None
+    GROQ_AVAILABLE = False
 from .local_embeddings import LocalEmbeddingClient, get_local_embedding_client
 from .logging_utils import ChatLogger, get_logger
 from .memory import ConversationManager, get_memory_manager
@@ -55,21 +62,26 @@ class ChatService:
         # Thứ tự ưu tiên: Groq -> Gemini -> OpenAI
         self.ai_client = ai_client
         if self.ai_client is None:
-            # Ưu tiên 1: Groq (miễn phí, nhanh nhất)
-            try:
-                from config_ai import GROQ_API_KEY
-                if GROQ_API_KEY and GROQ_API_KEY != "gsk_...":
-                    groq_client = get_groq_client()
-                    if groq_client.is_available():
-                        self.ai_client = groq_client
-                        self.use_gemini = False
-                        self.use_groq = True
-                        print("✅ ChatService sử dụng GROQ AI (MIỄN PHÍ!)")
+            # Ưu tiên 1: Groq (miễn phí, nhanh nhất) - chỉ thử nếu module có sẵn
+            if GROQ_AVAILABLE and get_groq_client is not None:
+                try:
+                    from config_ai import GROQ_API_KEY
+                    if GROQ_API_KEY and GROQ_API_KEY != "gsk_...":
+                        groq_client = get_groq_client()
+                        if groq_client.is_available():
+                            self.ai_client = groq_client
+                            self.use_gemini = False
+                            self.use_groq = True
+                            print("OK: ChatService su dung GROQ AI")
+                        else:
+                            raise Exception("Groq khong kha dung")
                     else:
-                        raise Exception("Groq không khả dụng")
-                else:
-                    raise Exception("Groq API key chưa cấu hình")
-            except Exception:
+                        raise Exception("Groq API key chua cau hinh")
+                except Exception:
+                    pass  # Fallback sang Gemini
+            else:
+                # Groq không có sẵn, bỏ qua
+                pass
                 # Ưu tiên 2: Gemini
                 try:
                     gemini_client = get_gemini_client()
@@ -132,52 +144,81 @@ class ChatService:
             if conversation_history is None:
                 conversation_history = self.memory_manager.get_history(session_id)
 
-            # 2. Tim kiem tai lieu lien quan
+            # 2. Tìm kiếm tài liệu liên quan - Cải thiện với hybrid search
             self.logger.logger.info(f"Searching for: {user_question}")
+            relevant_docs = []
+            
             try:
-                relevant_docs = self.retrieval_service.search(
+                # Semantic search với top_k lớn hơn để có nhiều lựa chọn
+                semantic_docs = self.retrieval_service.search(
                     query=user_question,
+                    top_k=8
+                )
+                self.logger.logger.info(f"Found {len(semantic_docs)} documents from semantic search")
+                
+                # Keyword search để bổ sung
+                keyword_docs = self.retrieval_service.keyword_search(
+                    query=user_question, 
                     top_k=5
                 )
-                self.logger.logger.info(f"Found {len(relevant_docs)} relevant documents")
+                self.logger.logger.info(f"Found {len(keyword_docs)} documents from keyword search")
+                
+                # Kết hợp và loại bỏ trùng lặp
+                doc_ids_seen = set()
+                for doc in semantic_docs + keyword_docs:
+                    if doc.id not in doc_ids_seen:
+                        relevant_docs.append(doc)
+                        doc_ids_seen.add(doc.id)
+                
+                # Giới hạn số lượng documents để tránh prompt quá dài
+                relevant_docs = relevant_docs[:7]
+                self.logger.logger.info(f"Total unique documents: {len(relevant_docs)}")
+                
             except Exception as e:
                 self.logger.logger.warning(f"Search failed: {e}, using keyword search only")
                 # Fallback to keyword search only if semantic search fails
                 relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
 
-            # 3. Xay dung prompt
-            prompt = self.prompt_builder.build_prompt(
-                question=user_question,
-                context_docs=relevant_docs,
+            # 3. Xây dựng prompt với context đầy đủ
+            messages = self.prompt_builder.build_prompt(
+                user_question=user_question,
+                documents=relevant_docs,
                 conversation_history=conversation_history,
                 context=context
             )
 
-            # 4. Chuyen doi tin nhan theo dinh dang cua AI
+            # 4. Chuyển đổi tin nhắn theo định dạng của AI (nếu cần)
             if self.use_gemini:
-                # Gemini format
-                messages = [
-                    {
-                        "role": msg["role"] if msg["role"] in ["user", "model"] else "user",
-                        "parts": [msg["content"]]
-                    }
-                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
-                ]
-            else:
-                # OpenAI/Groq format
-                messages = [
-                    {
-                        "role": msg["role"] if msg["role"] in ["user", "assistant", "system"] else "user",
-                        "content": msg["content"]
-                    }
-                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
-                ]
+                # Gemini format - chuyển đổi messages sang format Gemini
+                gemini_messages = []
+                for msg in messages:
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+                    
+                    if role == "system":
+                        # Gemini không hỗ trợ system message, chuyển thành user message với prefix
+                        gemini_messages.append({
+                            "role": "user",
+                            "parts": [f"[SYSTEM INSTRUCTIONS]\n{content}"]
+                        })
+                    elif role == "assistant":
+                        gemini_messages.append({
+                            "role": "model",
+                            "parts": [content]
+                        })
+                    else:
+                        gemini_messages.append({
+                            "role": "user",
+                            "parts": [content]
+                        })
+                messages = gemini_messages
 
-            # 5. Goi AI API
+            # 5. Gọi AI API với messages đã được format
             try:
                 if self.use_gemini:
                     response_text = self.ai_client.chat_completion(messages)["content"]
                 else:
+                    # OpenAI/Groq format - messages đã đúng format
                     response_text = self.ai_client.chat(messages)
             except Exception as api_error:
                 self.logger.logger.error(f"AI API call failed: {api_error}")
@@ -245,44 +286,59 @@ class ChatService:
             if conversation_history is None:
                 conversation_history = self.memory_manager.get_history(session_id)
 
-            # 2. Tim kiem tai lieu lien quan
+            # 2. Tìm kiếm tài liệu liên quan - Sử dụng cùng logic như chat()
             self.logger.logger.info(f"Searching for: {user_question}")
+            relevant_docs = []
+            
             try:
-                relevant_docs = self.retrieval_service.search(
-                    query=user_question,
-                    top_k=5
-                )
-                self.logger.logger.info(f"Found {len(relevant_docs)} relevant documents")
+                semantic_docs = self.retrieval_service.search(query=user_question, top_k=8)
+                keyword_docs = self.retrieval_service.keyword_search(query=user_question, top_k=5)
+                
+                doc_ids_seen = set()
+                for doc in semantic_docs + keyword_docs:
+                    if doc.id not in doc_ids_seen:
+                        relevant_docs.append(doc)
+                        doc_ids_seen.add(doc.id)
+                
+                relevant_docs = relevant_docs[:7]
+                self.logger.logger.info(f"Total unique documents: {len(relevant_docs)}")
             except Exception as e:
                 self.logger.logger.warning(f"Search failed: {e}, using keyword search only")
                 relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
 
-            # 3. Xay dung prompt
-            prompt = self.prompt_builder.build_prompt(
-                question=user_question,
-                context_docs=relevant_docs,
+            # 3. Xây dựng prompt với logic cải thiện
+            messages = self.prompt_builder.build_prompt(
+                user_question=user_question,
+                documents=relevant_docs,
                 conversation_history=conversation_history,
                 context=context
             )
 
-            # 4. Chuyen doi tin nhan
+            # 4. Chuyển đổi tin nhắn theo định dạng của AI
             if self.use_gemini:
-                messages = [
-                    {
-                        "role": msg["role"] if msg["role"] in ["user", "model"] else "user",
-                        "parts": [msg["content"]]
-                    }
-                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
-                ]
-                stream = self.ai_client.chat_completion_stream(messages)
+                gemini_messages = []
+                for msg in messages:
+                    role = msg.get("role", "user")
+                    content = msg.get("content", "")
+                    
+                    if role == "system":
+                        gemini_messages.append({
+                            "role": "user",
+                            "parts": [f"[SYSTEM INSTRUCTIONS]\n{content}"]
+                        })
+                    elif role == "assistant":
+                        gemini_messages.append({
+                            "role": "model",
+                            "parts": [content]
+                        })
+                    else:
+                        gemini_messages.append({
+                            "role": "user",
+                            "parts": [content]
+                        })
+                stream = self.ai_client.chat_completion_stream(gemini_messages)
             else:
-                messages = [
-                    {
-                        "role": msg["role"] if msg["role"] in ["user", "assistant", "system"] else "user",
-                        "content": msg["content"]
-                    }
-                    for msg in conversation_history[-5:] + [{"role": "user", "content": user_question}]
-                ]
+                # OpenAI/Groq format - messages đã đúng format
                 stream = self.ai_client.chat_stream(messages)
 
             # 5. Stream response
@@ -319,22 +375,38 @@ class ChatService:
             }
 
     def _generate_fallback_response(self, docs: List[Document], question: str) -> str:
-        """Tao response fallback tu tai lieu khi AI fail"""
+        """Tạo response fallback từ tài liệu khi AI fail - Cải thiện với format tốt hơn"""
+        if not docs:
+            return (
+                "Em xin lỗi, hiện tại hệ thống đang gặp sự cố kỹ thuật. "
+                "Anh/chị vui lòng thử lại sau hoặc liên hệ hotline 1900 xxxx để được hỗ trợ trực tiếp ạ."
+            )
+        
+        # Tạo response từ documents với format tốt hơn
         context_parts = []
-        for doc in docs:
-            title = doc.metadata.get("title", "Tài liệu")
-            content = doc.content[:500] if doc.content else ""
+        for doc in docs[:3]:  # Chỉ lấy 3 documents đầu
+            title = doc.title or doc.metadata.get("title", "Thông tin")
+            content = doc.content[:300] if doc.content else ""
+            
+            # Thêm metadata nếu là xe
+            if doc.doc_type == DocumentType.CAR and doc.metadata:
+                meta_info = []
+                if doc.metadata.get("gia_thue"):
+                    meta_info.append(f"Giá thuê: {doc.metadata.get('gia_thue'):,} VNĐ/ngày")
+                if doc.metadata.get("loai_xe"):
+                    meta_info.append(f"Loại: {doc.metadata.get('loai_xe')}")
+                if meta_info:
+                    content = f"{', '.join(meta_info)}\n{content}"
+            
             context_parts.append(f"**{title}**:\n{content}")
 
         context = "\n\n".join(context_parts)
 
-        return f"""Dựa trên thông tin từ hệ thống, tôi tìm thấy:
-
-{context}
-
----
-
-*Lưu ý: Đây là phản hồi từ tìm kiếm trực tiếp. Để có câu trả lời chi tiết hơn, vui lòng thử lại sau.*"""
+        return (
+            f"Dựa trên thông tin từ hệ thống, em tìm thấy:\n\n{context}\n\n"
+            "Nếu anh/chị cần thông tin chi tiết hơn, vui lòng để lại số điện thoại hoặc gọi hotline 1900 xxxx "
+            "để được tư vấn viên hỗ trợ tốt nhất ạ."
+        )
 
     def clear_session(self, session_id: str):
         """Xoa lich su cua mot session"""

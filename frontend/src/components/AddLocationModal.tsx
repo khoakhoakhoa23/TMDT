@@ -1,70 +1,41 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import locationApi from "../api/locationApi";
 
 const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    ten_dia_diem: "",
-    dia_chi_chi_tiet: "",
-  });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error khi user nhập
-    if (error) setError("");
-  };
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: {
+      ten_dia_diem: "",
+      dia_chi_chi_tiet: "",
+    }
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+  const onSubmit = async (data) => {
     setSuccess("");
 
-    // Validation
-    if (!formData.ten_dia_diem.trim()) {
-      setError("Vui lòng nhập tên địa điểm");
-      return;
-    }
-
-    setLoading(true);
     try {
       await locationApi.create({
-        ten_dia_diem: formData.ten_dia_diem.trim(),
-        dia_chi_chi_tiet: formData.dia_chi_chi_tiet.trim(),
+        ten_dia_diem: data.ten_dia_diem.trim(),
+        dia_chi_chi_tiet: data.dia_chi_chi_tiet.trim(),
         trang_thai: true,
       });
 
       setSuccess("Thêm địa điểm thành công!");
-      
-      // Reset form
-      setFormData({
-        ten_dia_diem: "",
-        dia_chi_chi_tiet: "",
-      });
 
-      // Callback để refresh danh sách
       if (onSuccess) {
         onSuccess();
       }
 
-      // Đóng modal sau 1.5 giây
       setTimeout(() => {
         onClose();
         setSuccess("");
+        reset();
       }, 1500);
     } catch (err) {
       console.error("Error adding location:", err);
-      const errorMessage =
-        err?.response?.data?.ten_dia_diem?.[0] ||
-        err?.response?.data?.detail ||
-        err?.response?.data?.message ||
-        "Không thể thêm địa điểm. Vui lòng thử lại.";
-      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -72,11 +43,7 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({
-        ten_dia_diem: "",
-        dia_chi_chi_tiet: "",
-      });
-      setError("");
+      reset();
       setSuccess("");
       onClose();
     }
@@ -104,7 +71,7 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6">
           {/* Success Message */}
           {success && (
             <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
@@ -112,10 +79,9 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
           )}
 
-          {/* Error Message */}
-          {error && (
+          {errors.ten_dia_diem && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+              <p className="text-red-700 dark:text-red-400 text-sm">{errors.ten_dia_diem.message}</p>
             </div>
           )}
 
@@ -127,11 +93,8 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
               </label>
               <input
                 type="text"
-                name="ten_dia_diem"
-                value={formData.ten_dia_diem}
-                onChange={handleChange}
+                {...register("ten_dia_diem", { required: "Vui lòng nhập tên địa điểm" })}
                 placeholder="Ví dụ: Hà Nội, Hồ Chí Minh, Đà Nẵng..."
-                required
                 disabled={loading}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               />
@@ -142,9 +105,7 @@ const AddLocationModal = ({ isOpen, onClose, onSuccess }) => {
                 Địa chỉ chi tiết
               </label>
               <textarea
-                name="dia_chi_chi_tiet"
-                value={formData.dia_chi_chi_tiet}
-                onChange={handleChange}
+                {...register("dia_chi_chi_tiet")}
                 placeholder="Nhập địa chỉ chi tiết (tùy chọn)"
                 rows={3}
                 disabled={loading}

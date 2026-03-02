@@ -97,8 +97,15 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (!session) {
-        await initSession();
+      // Đảm bảo có session trước khi gửi tin nhắn
+      let currentSession = session;
+      if (!currentSession) {
+        currentSession = await initSession();
+        // Nếu initSession thất bại, không thể gửi tin nhắn
+        if (!currentSession) {
+          setError("Không thể khởi tạo phiên chat. Vui lòng thử lại.");
+          return null;
+        }
       }
 
       if (!content.trim()) return null;
@@ -116,7 +123,7 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
         setMessages((prev) => [...prev, tempUserMessage]);
 
         const response = await chatApi.sendMessage(
-          (session as NonNullable<ChatSession>).session_id,
+          currentSession.session_id,
           content.trim(),
         );
 

@@ -1,4 +1,4 @@
-﻿from rest_framework import serializers
+from rest_framework import serializers
 from orders.models import (
     HoaDonNhap, ChiTietHDN, HoaDonXuat, ChiTietHDX,
     BaoHanh,
@@ -11,6 +11,8 @@ from products.serializers import XeSerializer
 # ==================== Billing Serializers ====================
 
 class ChiTietHDNSerializer(serializers.ModelSerializer):
+    xe_detail = XeSerializer(source="xe", read_only=True)
+
     class Meta:
         model = ChiTietHDN
         fields = "__all__"
@@ -24,18 +26,26 @@ class ChiTietHDNSerializer(serializers.ModelSerializer):
 
 
 class HoaDonNhapSerializer(serializers.ModelSerializer):
+    nhan_vien_name = serializers.CharField(source="nhan_vien.ten", read_only=True)
+    ncc_name = serializers.CharField(source="ncc.ten", read_only=True)
+
     class Meta:
         model = HoaDonNhap
         fields = "__all__"
 
 
 class HoaDonXuatSerializer(serializers.ModelSerializer):
+    nhan_vien_name = serializers.CharField(source="nhan_vien.ten", read_only=True)
+    khach_hang_name = serializers.CharField(source="khach_hang.ten", read_only=True)
+
     class Meta:
         model = HoaDonXuat
         fields = "__all__"
 
 
 class ChiTietHDXSerializer(serializers.ModelSerializer):
+    xe_detail = XeSerializer(source="xe", read_only=True)
+
     class Meta:
         model = ChiTietHDX
         fields = "__all__"
