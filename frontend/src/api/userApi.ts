@@ -39,6 +39,18 @@ const userApi = {
       },
     });
   },
+
+  // Tạo tài khoản tenant_admin (Super Admin only)
+  createTenantAdmin(data: {
+    tenant_id: number;
+    username: string;
+    password: string;
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  }) {
+    return axiosClient.post("users/create-tenant-admin/", data);
+  },
 };
 
 export default userApi;

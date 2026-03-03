@@ -9,6 +9,7 @@ import Dashboard from "../pages/Dashboard";
 import OrdersPage from "../pages/admin/OrdersPage";
 import ProductsPage from "../pages/admin/ProductsPage";
 import UsersPage from "../pages/admin/UsersPage";
+import TenantsPage from "../pages/admin/TenantsPage";
 import ProfilePage from "../pages/ProfilePage";
 import AdminProfilePage from "../pages/admin/ProfilePage";
 import AnalyticsPage from "../pages/admin/AnalyticsPage";
@@ -42,6 +43,18 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="profile" element={<ProfilePage />} />
+
+          {/* Tenants - Chỉ Super Admin mới truy cập được */}
+          <Route
+            path="tenants"
+            element={
+              <AdminRoute requiredRoles={["super_admin"]}>
+                <TenantsPage />
+              </AdminRoute>
+            }
+          />
+
+          {/* Các trang khác - Admin hoặc Tenant Admin */}
           <Route
             path="orders"
             element={

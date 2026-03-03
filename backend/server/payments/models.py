@@ -21,6 +21,13 @@ class Payment(models.Model):
         ("cancelled", "Đã hủy"),
     ]
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
     order = models.ForeignKey("orders.Order", on_delete=models.CASCADE, related_name="payments")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments")
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS)

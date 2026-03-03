@@ -6,6 +6,13 @@ from products.models import Xe
 # ==================== Billing Models ====================
 
 class HoaDonNhap(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="hoa_don_nhap",
+    )
     ma_hdn = models.CharField(max_length=10, primary_key=True)
     ngay_nhap = models.DateField()
     nhan_vien = models.ForeignKey(NhanVien, on_delete=models.CASCADE)
@@ -16,6 +23,13 @@ class HoaDonNhap(models.Model):
 
 
 class ChiTietHDN(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="chi_tiet_hdn",
+    )
     hoa_don = models.ForeignKey(HoaDonNhap, on_delete=models.CASCADE)
     xe = models.ForeignKey(Xe, on_delete=models.CASCADE)
     so_luong = models.IntegerField()
@@ -26,6 +40,13 @@ class ChiTietHDN(models.Model):
 
 
 class HoaDonXuat(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="hoa_don_xuat",
+    )
     ma_hdx = models.CharField(max_length=10, primary_key=True)
     ngay = models.DateField()
     nhan_vien = models.ForeignKey(NhanVien, on_delete=models.CASCADE)
@@ -36,6 +57,13 @@ class HoaDonXuat(models.Model):
 
 
 class ChiTietHDX(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="chi_tiet_hdx",
+    )
     hoa_don = models.ForeignKey(HoaDonXuat, on_delete=models.CASCADE)
     xe = models.ForeignKey(Xe, on_delete=models.CASCADE)
     so_luong = models.IntegerField()
@@ -47,6 +75,13 @@ class ChiTietHDX(models.Model):
 # ==================== Warranty Models ====================
 
 class BaoHanh(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="bao_hanh",
+    )
     ma_bh = models.CharField(max_length=10, primary_key=True)
     khach_hang = models.ForeignKey(KhachHang, on_delete=models.CASCADE)
     xe = models.ForeignKey(Xe, on_delete=models.CASCADE)
@@ -84,6 +119,13 @@ class Coupon(models.Model):
     usage_limit = models.IntegerField(null=True, blank=True, help_text="Giới hạn số lần sử dụng")
     used_count = models.IntegerField(default=0, help_text="Số lần đã sử dụng")
     is_active = models.BooleanField(default=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="coupons",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -119,6 +161,13 @@ class Coupon(models.Model):
 
 
 class Cart(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="carts",
+    )
     user = models.ForeignKey(
         "auth.User", on_delete=models.CASCADE, related_name="carts", null=True, blank=True
     )
@@ -132,6 +181,13 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="cart_items",
+    )
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
     xe = models.ForeignKey(Xe, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
@@ -155,6 +211,13 @@ class Order(models.Model):
         ("expired", "Hết hạn giữ chỗ"),
     ]
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="orders",
+    )
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
@@ -235,6 +298,13 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="order_items",
+    )
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
     xe = models.ForeignKey(Xe, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)

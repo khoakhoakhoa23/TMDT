@@ -1,4 +1,4 @@
-﻿from rest_framework import serializers
+from rest_framework import serializers
 from django.contrib.auth.models import User
 from users.models import Admin, NhanVien, KhachHang, NCC, UserProfile
 
@@ -117,6 +117,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
+    tenant = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     date_joined = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True)
     last_login = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", read_only=True, allow_null=True)
@@ -125,16 +126,28 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "is_staff", "is_superuser", "is_active", "date_joined", "last_login", "role", "password", "avatar_url", "profile"]
+        fields = ["id", "username", "email", "first_name", "last_name", "is_staff", "is_superuser", "is_active", "date_joined", "last_login", "role", "tenant", "password", "avatar_url", "profile"]
         read_only_fields = ["id", "date_joined", "last_login", "avatar_url", "profile"]
 
     def get_role(self, obj):
         if obj.is_superuser:
-            return "admin"
-        elif obj.is_staff:
-            return "staff"
-        else:
-            return "user"
+            return "super_admin"
+        try:
+            if hasattr(obj, "profile") and obj.profile:
+                if obj.profile.role == "tenant_admin":
+                    return "tenant_admin"
+        except Exception:
+            pass
+        return "user"
+
+    def get_tenant(self, obj):
+        try:
+            if hasattr(obj, "profile") and obj.profile and obj.profile.tenant:
+                t = obj.profile.tenant
+                return {"id": t.id, "name": t.name, "slug": t.slug}
+        except Exception:
+            pass
+        return None
 
     def get_avatar_url(self, obj):
         """Trả về URL đầy đủ của avatar từ profile

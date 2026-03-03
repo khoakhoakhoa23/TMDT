@@ -1,4 +1,4 @@
-﻿from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, AllowAny, IsAuthenticated
@@ -6,6 +6,8 @@ from django.shortcuts import get_object_or_404
 import logging
 
 from products.models import Location, LoaiXe, Xe, Review, CarImage, BlogPost, Wishlist
+from core.permissions import IsSuperAdminOrTenantAdmin
+from tenants.scoping import apply_tenant_filter, get_current_tenant
 from products.serializers import (
     LocationSerializer, LoaiXeSerializer, XeSerializer,
     ReviewSerializer, ReviewCreateSerializer,
@@ -28,7 +30,14 @@ class LocationViewSet(viewsets.ModelViewSet):
             # Cho phép user đã đăng nhập tạo địa điểm mới
             return [IsAuthenticated()]
         # Chỉ admin mới có thể update/delete
-        return [IsAdminUser()]
+        return [IsSuperAdminOrTenantAdmin()]
+
+    def get_queryset(self):
+        qs = Location.objects.filter(trang_thai=True).order_by("ten_dia_diem")
+        return apply_tenant_filter(qs, self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 # ==================== LoaiXe ViewSet ====================
@@ -41,11 +50,15 @@ class LoaiXeViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSuperAdminOrTenantAdmin()]
     
     def get_queryset(self):
         # Đảm bảo có ordering để tránh cảnh báo pagination
-        return LoaiXe.objects.all().order_by('ma_loai', 'ten_loai')
+        qs = LoaiXe.objects.all().order_by('ma_loai', 'ten_loai')
+        return apply_tenant_filter(qs, self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 # ==================== Xe ViewSet ====================
@@ -62,7 +75,7 @@ class XeViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [AllowAny()]
-        return [IsAdminUser()]
+        return [IsSuperAdminOrTenantAdmin()]
 
     def get_serializer_context(self):
         """Truyền request vào serializer để build absolute URI cho image"""
@@ -186,7 +199,7 @@ class XeViewSet(viewsets.ModelViewSet):
             )
         
         # Ordering được xử lý bởi OrderingFilter
-        return qs
+        return apply_tenant_filter(qs, self.request)
     
     @action(detail=False, methods=["get"], url_path="search-suggestions")
     def search_suggestions(self, request):
@@ -199,7 +212,7 @@ class XeViewSet(viewsets.ModelViewSet):
         # Lấy suggestions từ tên xe và loại xe
         from django.db.models import Q
         
-        cars = Xe.objects.filter(
+        cars = apply_tenant_filter(Xe.objects.all(), request).filter(
             Q(ten_xe__icontains=query) | Q(loai_xe__ten_loai__icontains=query)
         ).select_related("loai_xe")[:10]
         
@@ -247,6 +260,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter reviews theo xe nếu có xe_id trong query params"""
         queryset = Review.objects.select_related("user", "xe").all()
+        queryset = apply_tenant_filter(queryset, self.request)
         xe_id = self.request.query_params.get("xe_id")
         if xe_id:
             queryset = queryset.filter(xe_id=xe_id)
@@ -267,6 +281,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 )
             
             review = Review.objects.create(
+                tenant=get_current_tenant(request),
                 xe=xe,
                 user=request.user,
                 rating=serializer.validated_data["rating"],
@@ -279,7 +294,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 from core.consumers import send_notification
                 from django.contrib.auth import get_user_model
                 User = get_user_model()
-                staff_users = User.objects.filter(is_staff=True)
+                tenant = get_current_tenant(request)
+                staff_users = User.objects.filter(is_superuser=True)
+                if tenant:
+                    staff_users = staff_users | User.objects.filter(profile__tenant=tenant, profile__role="tenant_admin")
                 title = "Review mới"
                 message = f"Người dùng {request.user.username} vừa tạo review cho xe {xe.ten_xe}"
                 for staff in staff_users:
@@ -357,6 +375,7 @@ class CarImageViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter images theo xe nếu có xe_id trong query params"""
         queryset = CarImage.objects.select_related("xe").all()
+        queryset = apply_tenant_filter(queryset, self.request)
         xe_id = self.request.query_params.get("xe_id")
         if xe_id:
             queryset = queryset.filter(xe_id=xe_id)
@@ -384,7 +403,7 @@ class CarImageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        xe = get_object_or_404(Xe, pk=xe_id)
+        xe = get_object_or_404(apply_tenant_filter(Xe.objects.all(), request), pk=xe_id)
         images = request.FILES.getlist("images")  # Lấy danh sách files
         
         if not images:
@@ -394,8 +413,10 @@ class CarImageViewSet(viewsets.ModelViewSet):
             )
         
         created_images = []
+        tenant = get_current_tenant(request)
         for idx, image in enumerate(images):
             car_image = CarImage.objects.create(
+                tenant=tenant,
                 xe=xe,
                 image=image,
                 order=idx,
@@ -428,11 +449,18 @@ class BlogPostViewSet(viewsets.ModelViewSet):
     """ViewSet cho BlogPost"""
     queryset = BlogPost.objects.all().order_by("-published_at")
     serializer_class = BlogPostSerializer
+    
+    def get_queryset(self):
+        qs = BlogPost.objects.all().order_by("-published_at")
+        return apply_tenant_filter(qs, self.request)
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return []
-        return [IsAdminUser()]
+            return [AllowAny()]
+        return [IsSuperAdminOrTenantAdmin()]
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 # ==================== Wishlist ViewSet ====================
@@ -450,7 +478,11 @@ class WishlistViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Chỉ trả về wishlist của user hiện tại"""
-        return Wishlist.objects.filter(user=self.request.user).select_related("xe", "xe__loai_xe").prefetch_related("xe__car_images")
+        qs = Wishlist.objects.filter(user=self.request.user).select_related("xe", "xe__loai_xe").prefetch_related("xe__car_images")
+        return apply_tenant_filter(qs, self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user, tenant=get_current_tenant(self.request))
     
     def get_serializer_context(self):
         """Truyền request vào serializer để build absolute URI cho image"""
@@ -488,7 +520,7 @@ class WishlistViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            xe = Xe.objects.get(ma_xe=car_id)
+            xe = apply_tenant_filter(Xe.objects.all(), request).get(ma_xe=car_id)
             wishlist_item = Wishlist.objects.filter(user=request.user, xe=xe).first()
             in_wishlist = wishlist_item is not None
             

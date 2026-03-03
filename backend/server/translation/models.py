@@ -26,6 +26,13 @@ class Language(models.Model):
 
 class TranslationCache(models.Model):
     """Cache for translated text to avoid repeated API calls"""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="translation_caches",
+    )
     source_text = models.TextField()
     source_lang = models.CharField(max_length=10)
     target_lang = models.CharField(max_length=10)
@@ -37,7 +44,7 @@ class TranslationCache(models.Model):
     hit_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ['source_text', 'source_lang', 'target_lang']
+        unique_together = ['tenant', 'source_text', 'source_lang', 'target_lang']
         indexes = [
             models.Index(fields=['source_lang', 'target_lang']),
             models.Index(fields=['created_at']),
@@ -73,6 +80,13 @@ class TranslationRequest(models.Model):
     original_text = models.TextField()
     source_lang = models.CharField(max_length=10)
     target_lang = models.CharField(max_length=10)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="translation_requests",
+    )
     
     translated_text = models.TextField(null=True, blank=True)
     ai_provider = models.CharField(max_length=50, blank=True)
@@ -113,6 +127,13 @@ class TranslationRequest(models.Model):
 class TranslationKey(models.Model):
     """Store translatable keys for UI translations"""
     key = models.CharField(max_length=200, unique=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="translation_keys",
+    )
     description = models.CharField(max_length=500, blank=True)
     translations = models.JSONField(default=dict)  # {lang_code: translation}
     is_active = models.BooleanField(default=True)

@@ -85,6 +85,10 @@ const ProfilePage = () => {
 
   const getRoleText = (role) => {
     switch (role) {
+      case "super_admin":
+        return "Super Admin";
+      case "tenant_admin":
+        return "Admin Công ty";
       case "admin":
         return "Quản trị viên";
       case "staff":

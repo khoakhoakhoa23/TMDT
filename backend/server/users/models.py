@@ -1,10 +1,13 @@
-﻿from django.db import models
+from django.db import models
 from django.contrib.auth.models import User
+
+from tenants.models import Tenant
 
 
 class Admin(models.Model):
     username = models.CharField(max_length=100, primary_key=True)
     password = models.CharField(max_length=255)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True, related_name="admins")
 
     def __str__(self):
         return self.username
@@ -18,6 +21,7 @@ class NhanVien(models.Model):
     gioi_tinh = models.CharField(max_length=10)
     ngay_sinh = models.DateField()
     chuc_vu = models.CharField(max_length=100)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True, related_name="nhan_viens")
 
     def __str__(self):
         return self.ten
@@ -28,6 +32,7 @@ class KhachHang(models.Model):
     ten = models.CharField(max_length=255)
     sdt = models.CharField(max_length=20)
     dia_chi = models.CharField(max_length=255)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True, related_name="khach_hangs")
 
     def __str__(self):
         return self.ten
@@ -38,6 +43,7 @@ class NCC(models.Model):
     ten = models.CharField(max_length=255)
     dia_chi = models.CharField(max_length=255)
     sdt = models.CharField(max_length=20)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True, related_name="nha_cung_caps")
 
     def __str__(self):
         return self.ten
@@ -48,6 +54,23 @@ class NCC(models.Model):
 class UserProfile(models.Model):
     """Model mở rộng thông tin User với avatar"""
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    role = models.CharField(
+        max_length=20,
+        choices=[
+            ("tenant_admin", "Tenant Admin"),
+            ("user", "User"),
+        ],
+        default="user",
+        help_text="Role trong tenant (Super Admin dùng is_superuser)",
+    )
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="user_profiles",
+        help_text="Tenant (công ty) mà user thuộc về",
+    )
     avatar = models.ImageField(
         upload_to="avatars/",
         null=True,

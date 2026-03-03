@@ -1,7 +1,7 @@
-﻿from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model
 from django.utils.crypto import get_random_string
 from rest_framework import generics, viewsets, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -15,38 +15,64 @@ from users.serializers import (
     NhanVienSerializer, KhachHangSerializer, NCCSerializer,
     RegisterSerializer, UserSerializer
 )
+from core.permissions import IsSuperAdmin, IsSuperAdminOrTenantAdmin
+from tenants.scoping import apply_tenant_filter, get_current_tenant
 
 
 # ==================== People ViewSets ====================
 
 class NhanVienViewSet(viewsets.ModelViewSet):
-    """ViewSet cho NhanVien"""
+    """ViewSet cho NhanVien - Tenant Admin+"""
     queryset = NhanVien.objects.all()
     serializer_class = NhanVienSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(NhanVien.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 class KhachHangViewSet(viewsets.ModelViewSet):
-    """ViewSet cho KhachHang"""
+    """ViewSet cho KhachHang - Tenant Admin+"""
     queryset = KhachHang.objects.all()
     serializer_class = KhachHangSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(KhachHang.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 class NCCViewSet(viewsets.ModelViewSet):
-    """ViewSet cho NCC"""
+    """ViewSet cho NCC - Tenant Admin+"""
     queryset = NCC.objects.all()
     serializer_class = NCCSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(NCC.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 # ==================== Account ViewSets ====================
 
 class AdminViewSet(viewsets.ModelViewSet):
-    """ViewSet cho Admin"""
+    """ViewSet cho Admin - Super Admin only"""
     queryset = Admin.objects.all()
     serializer_class = AdminSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(Admin.objects.all(), self.request)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
 
 
 # ==================== Auth Views ====================
@@ -436,12 +462,97 @@ def google_login(request):
 def user_role(request):
     """Lấy role của user hiện tại"""
     user = request.user
-    role = "user"
     if user.is_superuser:
-        role = "admin"
-    elif user.is_staff:
-        role = "staff"
+        role = "super_admin"
+    else:
+        profile = getattr(user, "profile", None)
+        role = getattr(profile, "role", "user") if profile else "user"
     return Response({"username": user.username, "role": role})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_tenant_admin(request):
+    """Tạo tài khoản tenant_admin cho một tenant (Super Admin only)"""
+    from django.contrib.auth import get_user_model
+    from tenants.models import Tenant
+
+    # Check super admin
+    if not request.user.is_superuser:
+        return Response(
+            {"detail": "Chỉ Super Admin mới có quyền tạo tài khoản tenant admin."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    tenant_id = request.data.get("tenant_id")
+    username = request.data.get("username")
+    password = request.data.get("password")
+    email = request.data.get("email", "")
+    first_name = request.data.get("first_name", "")
+    last_name = request.data.get("last_name", "")
+
+    if not tenant_id:
+        return Response(
+            {"detail": "tenant_id là bắt buộc."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not username:
+        return Response(
+            {"detail": "username là bắt buộc."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if not password:
+        return Response(
+            {"detail": "password là bắt buộc."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Get tenant
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+    except Tenant.DoesNotExist:
+        return Response(
+            {"detail": "Tenant không tồn tại."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    User = get_user_model()
+
+    # Check if username exists
+    if User.objects.filter(username=username).exists():
+        return Response(
+            {"detail": "Username đã tồn tại."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Create user
+    user = User.objects.create_user(
+        username=username,
+        password=password,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        is_staff=True,
+        is_active=True
+    )
+
+    # Create/update profile with tenant_admin role
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.role = "tenant_admin"
+    profile.tenant = tenant
+    profile.save()
+
+    return Response({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "tenant": {
+            "id": tenant.id,
+            "name": tenant.name,
+            "slug": tenant.slug
+        },
+        "role": "tenant_admin"
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
@@ -783,19 +894,34 @@ def resend_verification_email(request):
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    ViewSet để quản lý tất cả tài khoản User (CRUD - chỉ admin)
+    ViewSet quản lý tài khoản theo multi-tenant:
+    - Super Admin: quản lý toàn bộ hệ thống
+    - Tenant Admin: quản lý user trong tenant của họ
     """
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    from core.permissions import IsSuperAdminOrTenantAdmin
+    permission_classes = [IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        qs = User.objects.all().order_by("-date_joined").select_related()
+        user = self.request.user
+        if user.is_superuser:
+            return qs
+        # Tenant admin: chỉ thấy user cùng tenant (qua profile)
+        tenant_id = getattr(getattr(user, "profile", None), "tenant_id", None)
+        if not tenant_id:
+            return User.objects.none()
+        return qs.filter(profile__tenant_id=tenant_id, is_superuser=False)
 
     def perform_create(self, serializer):
         """Tạo user mới với password"""
         password = self.request.data.get('password')
-        user = serializer.save()
+        user = serializer.save(is_staff=False, is_superuser=False)
         if password:
             user.set_password(password)
             user.save()
+        self._sync_profile(user, is_create=True)
 
     def perform_update(self, serializer):
         """Cập nhật user, bao gồm password nếu có"""
@@ -804,3 +930,59 @@ class UserViewSet(viewsets.ModelViewSet):
         if password:
             user.set_password(password)
             user.save()
+        self._sync_profile(user, is_create=False)
+
+    def _sync_profile(self, user: User, *, is_create: bool):
+        """
+        Đồng bộ tenant/role vào UserProfile.
+        - Super Admin có thể set tenant bằng tenant_id hoặc tenant_slug.
+        - Tenant Admin chỉ set trong tenant của mình.
+        """
+        from tenants.models import Tenant
+        from tenants.utils import get_or_create_default_tenant
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+
+        acting = self.request.user
+        if acting.is_superuser:
+            tenant = None
+            tenant_id = self.request.data.get("tenant_id")
+            tenant_slug = self.request.data.get("tenant_slug") or self.request.data.get("tenant")
+            if tenant_id:
+                tenant = Tenant.objects.filter(id=tenant_id).first()
+            elif tenant_slug:
+                tenant = Tenant.objects.filter(slug=str(tenant_slug)).first()
+            profile.tenant = tenant or profile.tenant or (None if user.is_superuser else get_or_create_default_tenant())
+
+            role = (self.request.data.get("role") or "").strip()
+            if role in {"tenant_admin", "user"} and not user.is_superuser:
+                profile.role = role
+            profile.save()
+            return
+
+        # Tenant admin: enforce same tenant; never allow elevating to superuser/staff
+        acting_tenant = getattr(getattr(acting, "profile", None), "tenant", None)
+        if acting_tenant:
+            profile.tenant = acting_tenant
+        role = (self.request.data.get("role") or "").strip()
+        if role in {"tenant_admin", "user"}:
+            profile.role = role
+        if user.is_superuser or user.is_staff:
+            user.is_superuser = False
+            user.is_staff = False
+            user.save(update_fields=["is_superuser", "is_staff"])
+        profile.save()
+
+    @action(detail=True, methods=["post"], url_path="lock")
+    def lock_account(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        return Response({"success": True, "is_active": user.is_active})
+
+    @action(detail=True, methods=["post"], url_path="unlock")
+    def unlock_account(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+        return Response({"success": True, "is_active": user.is_active})

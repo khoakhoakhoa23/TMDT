@@ -8,6 +8,8 @@ from rest_framework import status
 from datetime import datetime
 from orders.utils import check_schedule_conflict, calculate_rental_price, release_expired_reservations
 from orders.models import Coupon
+from tenants.scoping import apply_tenant_filter, get_current_tenant
+from core.permissions import IsSuperAdminOrTenantAdmin
 from products.models import Xe
 import requests
 import logging
@@ -216,7 +218,9 @@ def validate_coupon_api(request):
         )
     
     try:
-        coupon = Coupon.objects.get(code=coupon_code.upper())
+        # Apply tenant filter for coupon lookup
+        coupons = apply_tenant_filter(Coupon.objects.all(), request)
+        coupon = coupons.get(code=coupon_code.upper())
     except Coupon.DoesNotExist:
         return Response({
             "valid": False,
@@ -254,18 +258,12 @@ def validate_coupon_api(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def release_expired_reservations_api(request):
     """
     API để release các order hết hạn giữ chỗ (thường được gọi bởi cron job)
-    Chỉ admin mới có thể gọi
+    Chỉ tenant admin hoặc super admin mới có thể gọi
     """
-    if not request.user.is_staff:
-        return Response(
-            {"detail": "Chỉ admin mới có thể thực hiện."},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
     count = release_expired_reservations()
     
     return Response({

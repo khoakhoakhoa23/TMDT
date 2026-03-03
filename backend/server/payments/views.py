@@ -10,50 +10,56 @@ from payments.models import Payment
 from payments.serializers import PaymentSerializer, PaymentCreateSerializer
 from payments.payment_gateways import get_payment_gateway
 from orders.models import Order
+from tenants.scoping import apply_tenant_filter, get_current_tenant
+from core.permissions import IsSuperAdminOrTenantAdmin
 
 
 class PaymentViewSet(viewsets.ModelViewSet):
     """ViewSet cho Payment"""
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [IsAuthenticated, IsSuperAdminOrTenantAdmin]
+
     def get_queryset(self):
         """Filter payments theo user"""
         queryset = Payment.objects.select_related("order", "user").all()
+        queryset = apply_tenant_filter(queryset, self.request)
         if not self.request.user.is_staff:
             queryset = queryset.filter(user=self.request.user)
         return queryset
-    
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=get_current_tenant(self.request))
+
     @action(detail=False, methods=["post"], url_path="create")
     def create_payment(self, request):
         """Tạo payment request"""
         serializer = PaymentCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         order_id = serializer.validated_data["order_id"]
         payment_method = serializer.validated_data["payment_method"]
         return_url = serializer.validated_data.get("return_url", "")
-        
+
         # Lấy order
         order = get_object_or_404(Order, id=order_id, user=request.user)
-        
+
         # Kiểm tra xem đã có payment chưa
         existing_payment = Payment.objects.filter(
             order=order,
             status__in=["pending", "processing"]
         ).first()
-        
+
         if existing_payment:
             return Response(
                 {"detail": "Đơn hàng này đã có thanh toán đang chờ xử lý"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Tạo IPN URL
         ipn_url = request.build_absolute_uri(f"/api/payment/{order_id}/ipn/")
-        
+
         try:
             # Lấy payment gateway
             gateway = get_payment_gateway(
@@ -66,15 +72,17 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
             # Tạo payment request
             gateway_response = gateway.create_payment()
-            
+
             if not gateway_response.get("success"):
                 return Response(
                     {"detail": "Không thể tạo payment request"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-            
+
             # Lưu payment vào database
+            tenant = get_current_tenant(request)
             payment = Payment.objects.create(
+                tenant=tenant,
                 order=order,
                 user=request.user,
                 payment_method=payment_method,
