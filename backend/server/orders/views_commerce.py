@@ -264,38 +264,174 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
+        from orders.validators import (
+            validate_vietnamese_phone,
+            validate_future_date_for_rental,
+            validate_non_negative_number,
+            validate_address_length,
+            validate_payment_method,
+            validate_date_range,
+        )
+        from django.utils.dateparse import parse_date
+        
         user = request.user
         items_data = request.data.get("items", [])
         if not isinstance(items_data, list) or len(items_data) == 0:
             return Response({"detail": "items trống."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ===== VALIDATION SECTION =====
+        validation_errors = []
+        
+        # Validate shipping phone nếu có
+        shipping_phone = request.data.get("shipping_phone", "").strip()
+        if shipping_phone:
+            try:
+                validate_vietnamese_phone(shipping_phone)
+            except Exception as e:
+                validation_errors.append(str(e))
+        
+        # Validate shipping address
+        shipping_address = request.data.get("shipping_address", "").strip()
+        if shipping_address:
+            try:
+                validate_address_length(shipping_address, min_length=10, max_length=500)
+            except Exception as e:
+                validation_errors.append(str(e))
+        
+        # Validate rental dates
+        start_date_str = request.data.get("start_date")
+        end_date_str = request.data.get("end_date")
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            start_date = parse_date(str(start_date_str))
+            if start_date:
+                try:
+                    validate_future_date_for_rental(start_date)
+                except Exception as e:
+                    validation_errors.append(f"start_date: {str(e)}")
+        
+        if end_date_str:
+            end_date = parse_date(str(end_date_str))
+        
+        if start_date and end_date:
+            try:
+                validate_date_range(start_date, end_date, allow_same_day=True)
+            except Exception as e:
+                validation_errors.append(f"end_date: {str(e)}")
+        
+        # Validate pickup/return locations cho thuê xe
+        pickup_location = request.data.get("pickup_location", "").strip()
+        return_location = request.data.get("return_location", "").strip()
+        
+        if (start_date or end_date) and not pickup_location:
+            validation_errors.append("pickup_location: Vui lòng chọn địa điểm nhận xe.")
+        
+        if (start_date or end_date) and not return_location:
+            validation_errors.append("return_location: Vui lòng chọn địa điểm trả xe.")
+        
+        # Validate rental days and hours
+        rental_days = request.data.get("rental_days", 1)
+        rental_hours = request.data.get("rental_hours", 0)
+        
+        try:
+            rental_days = int(rental_days) if rental_days else 1
+            if rental_days < 0:
+                validation_errors.append("rental_days: Số ngày thuê không được âm.")
+            if rental_days > 365:
+                validation_errors.append("rental_days: Số ngày thuê không được vượt quá 365 ngày.")
+        except (ValueError, TypeError):
+            validation_errors.append("rental_days: Số ngày thuê phải là số.")
+        
+        try:
+            rental_hours = int(rental_hours) if rental_hours else 0
+            if rental_hours < 0:
+                validation_errors.append("rental_hours: Số giờ thuê không được âm.")
+        except (ValueError, TypeError):
+            validation_errors.append("rental_hours: Số giờ thuê phải là số.")
+        
+        # Validate prices - all must be non-negative
+        for field_name in ['base_price', 'delivery_fee', 'pickup_fee', 'additional_fee']:
+            value = request.data.get(field_name)
+            if value:
+                try:
+                    val = Decimal(str(value))
+                    if val < 0:
+                        validation_errors.append(f"{field_name}: Giá trị không được âm.")
+                except (ValueError, TypeError):
+                    validation_errors.append(f"{field_name}: Giá trị không hợp lệ.")
+        
+        # Validate payment method
+        payment_method = request.data.get("payment_method", "").strip()
+        if payment_method:
+            try:
+                validate_payment_method(payment_method)
+            except Exception as e:
+                validation_errors.append(str(e))
+        
+        # Return validation errors if any
+        if validation_errors:
+            return Response(
+                {"detail": "Validation failed", "errors": validation_errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # ===== END VALIDATION SECTION =====
 
         subtotal = Decimal(0)
         order_items = []
 
         for item in items_data:
             xe_id = item.get("xe_id")
-            quantity = int(item.get("quantity", 0))
-            if not xe_id or quantity <= 0:
-                return Response(
-                    {"detail": "Thiếu xe_id hoặc quantity không hợp lệ."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            
+            # Validate xe_id
+            if not xe_id:
+                validation_errors.append("Thiếu xe_id trong danh sách sản phẩm.")
+                continue
+            
+            # Validate quantity
+            try:
+                quantity = int(item.get("quantity", 0))
+                if quantity <= 0:
+                    validation_errors.append(f"Xe ID {xe_id}: Số lượng phải lớn hơn 0.")
+                    continue
+                if quantity > 100:
+                    validation_errors.append(f"Xe ID {xe_id}: Số lượng không được vượt quá 100.")
+                    continue
+            except (ValueError, TypeError):
+                validation_errors.append(f"Xe ID {xe_id}: Số lượng không hợp lệ.")
+                continue
+            
             try:
                 # Use select_for_update to prevent race condition
                 xe = Xe.objects.select_for_update().get(pk=xe_id)
             except Xe.DoesNotExist:
-                return Response({"detail": f"Xe {xe_id} không tồn tại."}, status=404)
+                validation_errors.append(f"Xe ID {xe_id}: Xe không tồn tại.")
+                continue
+            except Exception as e:
+                logger.error(f"Error fetching xe {xe_id}: {str(e)}")
+                validation_errors.append(f"Xe ID {xe_id}: Lỗi khi lấy thông tin xe.")
+                continue
 
             if xe.so_luong < quantity:
-                return Response(
-                    {"detail": f"Xe '{xe.ten_xe}' chỉ còn {xe.so_luong} chiếc."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                validation_errors.append(
+                    f"Xe '{xe.ten_xe}': Chỉ còn {xe.so_luong} chiếc, không đủ để đặt {quantity} chiếc."
                 )
+                continue
 
             # Ưu tiên gia_thue cho thuê xe, sau đó gia_khuyen_mai, cuối cùng là gia
             price = xe.gia_thue if xe.gia_thue else (xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia)
             subtotal += Decimal(str(price)) * quantity
             order_items.append((xe, quantity, price))
+
+        # Return validation errors from items processing
+        if validation_errors:
+            return Response(
+                {"detail": "Validation failed", "errors": validation_errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Xử lý coupon
         coupon_code = request.data.get("coupon_code", "").strip()

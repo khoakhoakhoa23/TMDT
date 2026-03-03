@@ -107,13 +107,15 @@ const ChatWindow = () => {
     if (messages.length === 0) return null;
     
     const lastBotMessage = [...messages].reverse().find(msg => msg.message_type === 'bot');
-    if (!lastBotMessage || !lastBotMessage.quick_replies || lastBotMessage.quick_replies.length === 0) {
+    if (!lastBotMessage || !lastBotMessage.quick_replies || (lastBotMessage.quick_replies as string[]).length === 0) {
       return null;
     }
 
+    const quickReplies = lastBotMessage.quick_replies as string[];
+    
     return (
       <div className="flex flex-wrap gap-2 mt-3 px-2">
-        {lastBotMessage.quick_replies.map((reply, index) => (
+        {quickReplies.map((reply, index) => (
           <button
             key={index}
             onClick={() => handleQuickReply(reply)}

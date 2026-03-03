@@ -4,8 +4,26 @@ Tich hop retrieval, Prompt builder va Gemini/OpenAI/Groq API
 """
 import sys
 import time
+import traceback
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+
+# Custom exceptions for better error handling
+class ChatServiceError(Exception):
+    """Base exception for chat service"""
+    pass
+
+class RetrievalError(ChatServiceError):
+    """Exception when retrieval fails"""
+    pass
+
+class AIAPIError(ChatServiceError):
+    """Exception when AI API call fails"""
+    pass
+
+class TimeoutError(ChatServiceError):
+    """Exception when request times out"""
+    pass
 
 # Thêm đường dẫn cho config
 sys.path.insert(0, '../../..')
@@ -174,10 +192,14 @@ class ChatService:
                 relevant_docs = relevant_docs[:7]
                 self.logger.logger.info(f"Total unique documents: {len(relevant_docs)}")
                 
-            except Exception as e:
+            except (RetrievalError, ConnectionError, TimeoutError) as e:
                 self.logger.logger.warning(f"Search failed: {e}, using keyword search only")
                 # Fallback to keyword search only if semantic search fails
-                relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
+                try:
+                    relevant_docs = self.retrieval_service.keyword_search(user_question, top_k=5)
+                except Exception as fallback_error:
+                    self.logger.logger.error(f"Fallback search also failed: {fallback_error}")
+                    relevant_docs = []
 
             # 3. Xây dựng prompt với context đầy đủ
             messages = self.prompt_builder.build_prompt(
@@ -220,14 +242,23 @@ class ChatService:
                 else:
                     # OpenAI/Groq format - messages đã đúng format
                     response_text = self.ai_client.chat(messages)
-            except Exception as api_error:
+            except (AIAPIError, ConnectionError, TimeoutError) as api_error:
                 self.logger.logger.error(f"AI API call failed: {api_error}")
-
+                
                 # Thử dùng keyword search result trực tiếp
                 if relevant_docs:
-                    response_text = self._generate_fallback_response(relevant_docs, user_question)
+                    self.logger.logger.info("Attempting fallback response generation")
+                    try:
+                        response_text = self._generate_fallback_response(relevant_docs, user_question)
+                    except Exception as fallback_error:
+                        self.logger.logger.error(f"Fallback response generation failed: {fallback_error}")
+                        raise AIAPIError(f"AI API failed and fallback also failed: {fallback_error}") from fallback_error
                 else:
-                    raise api_error
+                    raise AIAPIError(f"AI API call failed: {api_error}") from api_error
+            except Exception as unknown_error:
+                # Log full traceback for unknown errors
+                self.logger.logger.error(f"Unknown AI error: {unknown_error}\n{traceback.format_exc()}")
+                raise AIAPIError(f"Unexpected error during AI call: {unknown_error}") from unknown_error
 
             # 6. Luu lich su
             self.memory_manager.add_message(session_id, "user", user_question)
@@ -247,12 +278,26 @@ class ChatService:
             )
 
         except Exception as e:
-            self.logger.log_error("Chat processing failed", e)
+            # Log full traceback for debugging
+            self.logger.log_error("Chat processing failed", f"{str(e)}\n{traceback.format_exc()}")
+            
+            # Determine error type for better user feedback
+            error_type = type(e).__name__
+            user_message = "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau!"
+            
+            if "timeout" in str(e).lower() or error_type == "TimeoutError":
+                user_message = "Xin lỗi, yêu cầu của bạn đang mất quá lâu. Vui lòng thử lại sau!"
+            elif "connection" in str(e).lower() or "network" in str(e).lower():
+                user_message = "Xin lỗi, không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối internet!"
+            elif "api" in str(e).lower():
+                user_message = "Xin lỗi, dịch vụ AI đang gặp sự cố. Vui lòng thử lại sau!"
+            
             return ChatResponse(
-                answer="Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau!",
+                answer=user_message,
                 sources=[],
                 processing_time=time.time() - start_time,
-                error=str(e)
+                error=str(e),
+                error_type=error_type
             )
 
     def chat_with_stream(

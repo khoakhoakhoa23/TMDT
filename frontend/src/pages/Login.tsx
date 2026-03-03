@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import authApi from "../api/authApi";
 import { useNavigate, Link, useLocation } from "react-router-dom";
@@ -13,8 +14,18 @@ const HAS_GOOGLE_OAUTH = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.trim() !== "";
 const FACEBOOK_APP_ID = (import.meta as any).env?.VITE_FACEBOOK_APP_ID || "";
 const HAS_FACEBOOK_OAUTH = FACEBOOK_APP_ID && FACEBOOK_APP_ID.trim() !== "";
 
+type FloatingInputProps = {
+  name: string;
+  type: string;
+  placeholder: string;
+  disabled?: boolean;
+  error?: string;
+  register: (name: string) => any;
+  label?: string;
+};
+
 // Floating Input Component với animation
-function FloatingInput({ name, type, placeholder, disabled, error, register, label }) {
+function FloatingInput({ name, type, placeholder, disabled, error, register, label }: FloatingInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
@@ -53,8 +64,17 @@ function FloatingInput({ name, type, placeholder, disabled, error, register, lab
   );
 }
 
+type AnimatedButtonProps = {
+  children: ReactNode;
+  loading?: boolean;
+  disabled?: boolean;
+  className?: string;
+  onClick?: () => void;
+  type?: "button" | "submit" | "reset";
+};
+
 // Animated Button Component
-function AnimatedButton({ children, loading, disabled, className, onClick, type }) {
+function AnimatedButton({ children, loading, disabled, className, onClick, type }: AnimatedButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -89,8 +109,17 @@ function AnimatedButton({ children, loading, disabled, className, onClick, type 
   );
 }
 
+type SocialButtonProps = {
+  children?: ReactNode;
+  icon: ReactNode;
+  onClick: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  label?: string;
+};
+
 // Social Login Button Component
-function SocialButton({ children, icon, onClick, loading, disabled, label }) {
+function SocialButton({ children, icon, onClick, loading, disabled, label }: SocialButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -110,11 +139,18 @@ function SocialButton({ children, icon, onClick, loading, disabled, label }) {
   );
 }
 
+type GoogleLoginButtonProps = {
+  onSuccess: (tokenResponse: { access_token: string }) => void;
+  onError: (error: Error) => void;
+  disabled?: boolean;
+  loading?: boolean;
+};
+
 // Google Login Button Component
-function GoogleLoginButton({ onSuccess, onError, disabled, loading }) {
+function GoogleLoginButton({ onSuccess, onError, disabled, loading }: GoogleLoginButtonProps) {
   if (!HAS_GOOGLE_OAUTH) return null;
 
-  const googleLogin = useGoogleLogin({ onSuccess, onError });
+  const googleLogin = useGoogleLogin({ onSuccess: (data) => onSuccess(data), onError: (error) => onError(error as Error) });
 
   return (
     <div className="relative">
@@ -136,8 +172,15 @@ function GoogleLoginButton({ onSuccess, onError, disabled, loading }) {
   );
 }
 
+type FacebookLoginButtonProps = {
+  onSuccess: (tokenResponse: { access_token: string }) => void;
+  onError: (error: Error) => void;
+  disabled?: boolean;
+  loading?: boolean;
+};
+
 // Facebook Login Button Component
-function FacebookLoginButton({ onSuccess, onError, disabled, loading }) {
+function FacebookLoginButton({ onSuccess, onError, disabled, loading }: FacebookLoginButtonProps) {
   useEffect(() => {
     if (!HAS_FACEBOOK_OAUTH) return;
     if (window.FB) return;
@@ -206,8 +249,12 @@ function FacebookLoginButton({ onSuccess, onError, disabled, loading }) {
   );
 }
 
+type ErrorAlertProps = {
+  message: string;
+};
+
 // Animated Error Alert
-function ErrorAlert({ message }) {
+function ErrorAlert({ message }: ErrorAlertProps) {
   return (
     <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-[shake_0.5s_ease-in-out]">
       <div className="flex items-center gap-3">
@@ -220,8 +267,13 @@ function ErrorAlert({ message }) {
   );
 }
 
+type GlassCardProps = {
+  children: ReactNode;
+  className?: string;
+};
+
 // Responsive Card Component
-function GlassCard({ children, className = "" }) {
+function GlassCard({ children, className = "" }: GlassCardProps) {
   return (
     <div className={`
       bg-white/80 dark:bg-gray-800/80 

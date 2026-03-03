@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from "axios";
+import axios, { AxiosRequestHeaders, InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/";
@@ -13,10 +13,10 @@ const axiosClient = axios.create({
 const PUBLIC_PATHS = ["xe/", "loaixe/", "blog/", "location/"];
 
 axiosClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem("access_token");
     if (token) {
-      if (!config.headers) config.headers = {};
+      if (!config.headers) config.headers = {} as AxiosRequestHeaders;
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -30,7 +30,7 @@ axiosClient.interceptors.request.use(
           Math.random().toString(36).substring(2, 15);
         localStorage.setItem("session_key", sessionKey);
       }
-      if (!config.headers) config.headers = {};
+      if (!config.headers) config.headers = {} as AxiosRequestHeaders;
       (config.headers as Record<string, string>)["X-Session-Key"] =
         sessionKey;
     }
@@ -53,7 +53,7 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config as AxiosRequestConfig & {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
     const isPublic = PUBLIC_PATHS.some((p) =>
@@ -101,7 +101,7 @@ axiosClient.interceptors.response.use(
         const { access } = response.data;
         localStorage.setItem("access_token", access);
         if (!originalRequest.headers)
-          originalRequest.headers = {};
+          originalRequest.headers = {} as AxiosRequestHeaders;
         originalRequest.headers.Authorization = `Bearer ${access}`;
 
         return axiosClient(originalRequest);
