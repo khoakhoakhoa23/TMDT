@@ -13,6 +13,13 @@ class ChatSession(models.Model):
     )
     
     session_id = models.CharField(max_length=100, unique=True, db_index=True)
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="chat_sessions",
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     session_type = models.CharField(max_length=20, choices=SESSION_TYPES, default='support')
     is_active = models.BooleanField(default=True)

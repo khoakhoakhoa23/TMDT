@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet, WishlistViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email
+from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email, create_tenant_admin
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout, generate_export_invoices, get_completed_orders_without_invoice
 from orders.api_views import (
@@ -16,6 +16,7 @@ from orders.api_views import (
 )
 from payments.views import PaymentViewSet, payment_callback
 from core.views import NotificationViewSet
+from tenants.views import TenantViewSet
 from analytics.views import (
     doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay,
     coupon_analytics, coupon_usage_over_time, coupon_performance
@@ -43,6 +44,7 @@ router.register(r"cart", CartViewSet, basename="cart")
 router.register(r"cart-item", CartItemViewSet, basename="cart-item")
 router.register(r"order", OrderViewSet, basename="order")
 router.register(r"notifications", NotificationViewSet, basename="notification")
+router.register(r"tenants", TenantViewSet, basename="tenants")
 
 urlpatterns = [
     path("", include(router.urls)),
@@ -62,6 +64,7 @@ urlpatterns = [
     path("users/resend-verification/", resend_verification_email, name="resend_verification"),
     path("users/request-password-reset/", request_password_reset, name="request_password_reset"),
     path("users/reset-password/", reset_password, name="reset_password"),
+    path("users/create-tenant-admin/", create_tenant_admin, name="create_tenant_admin"),
     path("thongke/doanhthu-homnay/", doanh_thu_hom_nay),
     path("thongke/doanhthu/<int:year>/<int:month>/", doanh_thu_thang),
     path("thongke/tong-xe-da-ban/", tong_xe_da_ban),

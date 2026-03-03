@@ -27,6 +27,8 @@ from .serializers import (
     DetectLanguageResponseSerializer,
 )
 from .services.translation_service import get_translation_service
+from tenants.scoping import apply_tenant_filter, get_current_tenant
+from core.permissions import IsSuperAdmin, IsSuperAdminOrTenantAdmin
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +37,8 @@ class LanguageViewSet(viewsets.ModelViewSet):
     """ViewSet for managing supported languages"""
     queryset = Language.objects.filter(is_active=True)
     serializer_class = LanguageSerializer
-    permission_classes = [AllowAny]
-    
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminUser()]
-        return [AllowAny()]
-    
+    permission_classes = [IsSuperAdminOrTenantAdmin]
+
     @action(detail=False, methods=['get'])
     def default(self, request):
         """Get default language"""
@@ -56,14 +53,16 @@ class TranslationCacheViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for viewing translation cache"""
     queryset = TranslationCache.objects.all()
     serializer_class = TranslationCacheSerializer
-    permission_classes = [IsAdminUser]
-    filterset_fields = ['source_lang', 'target_lang', 'ai_provider']
-    search_fields = ['source_text', 'translated_text']
-    
+    permission_classes = [IsSuperAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(TranslationCache.objects.all(), self.request)
+
     @action(detail=False, methods=['delete'])
     def clear(self, request):
         """Clear all translation cache (admin only)"""
-        TranslationCache.objects.all().delete()
+        qs = apply_tenant_filter(TranslationCache.objects.all(), request)
+        qs.delete()
         return Response({'message': 'Translation cache cleared'})
 
 
@@ -71,30 +70,29 @@ class TranslationRequestViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet for viewing translation requests"""
     queryset = TranslationRequest.objects.all()
     serializer_class = TranslationRequestSerializer
-    permission_classes = [IsAdminUser]
-    filterset_fields = ['content_type', 'status', 'source_lang', 'target_lang']
-    search_fields = ['original_text', 'translated_text']
+    permission_classes = [IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(TranslationRequest.objects.all(), self.request)
 
 
 class TranslationKeyViewSet(viewsets.ModelViewSet):
     """ViewSet for managing UI translation keys"""
     queryset = TranslationKey.objects.filter(is_active=True)
     serializer_class = TranslationKeySerializer
-    permission_classes = [IsAdminUser]
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        return [IsAdminUser()]
-    
+    permission_classes = [IsSuperAdminOrTenantAdmin]
+
+    def get_queryset(self):
+        return apply_tenant_filter(TranslationKey.objects.all(), self.request)
+
     @action(detail=False, methods=['get'])
     def all(self, request):
         """Get all translations for a specific language"""
         lang = request.query_params.get('lang', 'vi')
-        
-        keys = TranslationKey.objects.filter(is_active=True)
+
+        keys = apply_tenant_filter(TranslationKey.objects.filter(is_active=True), request)
         translations = {key.key: key.get_translation(lang) for key in keys}
-        
+
         return Response(translations)
 
 

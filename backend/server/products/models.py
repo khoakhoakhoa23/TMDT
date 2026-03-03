@@ -1,9 +1,16 @@
-﻿from django.db import models
+from django.db import models
 from django.contrib.auth.models import User
 
 
 class Location(models.Model):
     """Địa điểm nhận/trả xe"""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="locations",
+    )
     ten_dia_diem = models.CharField(max_length=255, unique=True, help_text="Tên địa điểm")
     dia_chi_chi_tiet = models.TextField(blank=True, help_text="Địa chỉ chi tiết")
     trang_thai = models.BooleanField(default=True, help_text="Đang hoạt động")
@@ -20,6 +27,13 @@ class Location(models.Model):
 
 
 class LoaiXe(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="loai_xe",
+    )
     ma_loai = models.CharField(max_length=10, primary_key=True)
     ten_loai = models.CharField(max_length=255)
 
@@ -28,6 +42,13 @@ class LoaiXe(models.Model):
 
 
 class Xe(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="cars",
+    )
     ma_xe = models.CharField(max_length=10, primary_key=True)
     ten_xe = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
@@ -71,6 +92,13 @@ class Xe(models.Model):
 
 class Review(models.Model):
     """Đánh giá và nhận xét của khách hàng về xe"""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reviews",
+    )
     xe = models.ForeignKey("Xe", on_delete=models.CASCADE, related_name="reviews")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
     rating = models.IntegerField(
@@ -94,6 +122,13 @@ class Review(models.Model):
 
 class CarImage(models.Model):
     """Ảnh của xe - mỗi xe có thể có nhiều ảnh"""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="car_images",
+    )
     xe = models.ForeignKey("Xe", on_delete=models.CASCADE, related_name="car_images")
     image = models.ImageField(upload_to="cars/", help_text="Upload ảnh xe")
     image_url = models.URLField(max_length=500, blank=True, help_text="URL ảnh (nếu có)")
@@ -121,6 +156,13 @@ class CarImage(models.Model):
 
 
 class BlogPost(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="blog_posts",
+    )
     slug = models.SlugField(max_length=255, unique=True)
     title = models.CharField(max_length=255)
     excerpt = models.CharField(max_length=500, blank=True)
@@ -139,6 +181,13 @@ class BlogPost(models.Model):
 
 class Wishlist(models.Model):
     """Danh sách yêu thích của người dùng"""
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="wishlists",
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishlists")
     xe = models.ForeignKey("Xe", on_delete=models.CASCADE, related_name="wishlists")
     created_at = models.DateTimeField(auto_now_add=True)

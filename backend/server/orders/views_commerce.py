@@ -12,6 +12,8 @@ from rest_framework.exceptions import PermissionDenied
 from orders.models import Cart, CartItem, Order, OrderItem, Coupon, HoaDonXuat, ChiTietHDX
 from products.models import Xe
 from orders.serializers import CartSerializer, CartItemSerializer, OrderSerializer
+from tenants.scoping import apply_tenant_filter, get_current_tenant
+from core.permissions import IsSuperAdminOrTenantAdmin
 from decimal import Decimal
 
 
@@ -21,39 +23,44 @@ def _get_session_key(request):
 
 class CartViewSet(viewsets.ModelViewSet):
     serializer_class = CartSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         session_key = _get_session_key(self.request)
+        qs = Cart.objects.all()
         if self.request.user.is_authenticated:
-            return Cart.objects.filter(user=self.request.user).prefetch_related("items__xe")
-        if session_key:
-            return Cart.objects.filter(session_key=session_key, user__isnull=True).prefetch_related(
-                "items__xe"
-            )
-        return Cart.objects.none()
-    
+            qs = qs.filter(user=self.request.user).prefetch_related("items__xe")
+        elif session_key:
+            qs = qs.filter(session_key=session_key, user__isnull=True).prefetch_related("items__xe")
+        else:
+            qs = Cart.objects.none()
+        return apply_tenant_filter(qs, self.request)
+
     def perform_create(self, serializer):
+        tenant = get_current_tenant(self.request)
         if self.request.user.is_authenticated:
-            serializer.save(user=self.request.user, session_key="")
+            serializer.save(user=self.request.user, session_key="", tenant=tenant)
         else:
             session_key = _get_session_key(self.request)
             if not session_key:
                 raise PermissionDenied("Thiếu session_key cho khách.")
-            serializer.save(user=None, session_key=session_key)
+            serializer.save(user=None, session_key=session_key, tenant=tenant)
 
 
 class CartItemViewSet(viewsets.ModelViewSet):
     serializer_class = CartItemSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         session_key = _get_session_key(self.request)
+        qs = CartItem.objects.all()
         if self.request.user.is_authenticated:
-            return CartItem.objects.filter(cart__user=self.request.user).select_related("xe", "cart")
-        if session_key:
-            return CartItem.objects.filter(
-                cart__session_key=session_key, cart__user__isnull=True
-            ).select_related("xe", "cart")
-        return CartItem.objects.none()
+            qs = qs.filter(cart__user=self.request.user).select_related("xe", "cart")
+        elif session_key:
+            qs = qs.filter(cart__session_key=session_key, cart__user__isnull=True).select_related("xe", "cart")
+        else:
+            qs = CartItem.objects.none()
+        return apply_tenant_filter(qs, self.request)
 
     def create(self, request, *args, **kwargs):
         """
@@ -88,7 +95,9 @@ class CartItemViewSet(viewsets.ModelViewSet):
         else:
             logger.info(f"[CartItem] Item not found, creating new one (cart={cart.id}, xe={xe.id})")
             # Item doesn't exist - create new one
+            tenant = get_current_tenant(request)
             cart_item = CartItem.objects.create(
+                tenant=tenant,
                 cart=cart,
                 xe=xe,
                 quantity=quantity
@@ -115,14 +124,15 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Chỉ admin mới có thể update/delete đơn hàng"""
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsAdminUser()]
+            return [IsAuthenticated(), IsSuperAdminOrTenantAdmin()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        qs = Order.objects.filter(user=self.request.user).prefetch_related("items__xe")
+        qs = Order.objects.all().prefetch_related("items__xe")
         if self.request.user.is_staff or self.request.user.is_superuser:
-            return Order.objects.all().prefetch_related("items__xe").order_by('-created_at')
-        return qs
+            return apply_tenant_filter(qs, self.request).order_by('-created_at')
+        # Regular user sees only their orders
+        return qs.filter(user=self.request.user).order_by('-created_at')
     
     def update(self, request, *args, **kwargs):
         """Override update để tự động cập nhật payment status khi order status = 'paid'"""
@@ -484,7 +494,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         
         total_price = subtotal - discount_amount
 
+        tenant = get_current_tenant(request)
         order = Order.objects.create(
+            tenant=tenant,
             user=user,
             total_price=total_price,
             status="pending",
@@ -510,6 +522,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         )
         for xe, qty, price in order_items:
             OrderItem.objects.create(
+                tenant=tenant,
                 order=order, xe=xe, quantity=qty, price_at_purchase=price
             )
             # Double-check inventory before decrementing (xe is already locked from select_for_update above)
@@ -579,7 +592,9 @@ def _checkout_transaction(cart, coupon_code=None):
     
     total_price = subtotal - discount_amount
 
+    tenant = getattr(cart, 'tenant', None)
     order = Order.objects.create(
+        tenant=tenant,
         user=cart.user,
         total_price=total_price,
         status="pending",
@@ -603,6 +618,7 @@ def _checkout_transaction(cart, coupon_code=None):
         # Ưu tiên gia_thue cho thuê xe, sau đó gia_khuyen_mai, cuối cùng là gia
         price = xe.gia_thue if xe.gia_thue else (xe.gia_khuyen_mai if xe.gia_khuyen_mai else xe.gia)
         OrderItem.objects.create(
+            tenant=tenant,
             order=order, xe=xe, quantity=item.quantity, price_at_purchase=price
         )
         # Double-check inventory before decrementing (xe is already locked with select_for_update)

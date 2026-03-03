@@ -12,6 +12,13 @@ class Notification(models.Model):
         ("system", "Thông báo hệ thống"),
     ]
 
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     title = models.CharField(max_length=255)

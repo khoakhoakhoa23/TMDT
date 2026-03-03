@@ -7,7 +7,7 @@ import {
 } from "react";
 import authApi from "../api/authApi";
 
-type UserRole = "admin" | "staff" | "user" | string | undefined;
+type UserRole = "super_admin" | "tenant_admin" | "admin" | "staff" | "user" | string | undefined;
 
 type User =
   | {
@@ -18,6 +18,11 @@ type User =
       last_name?: string;
       role?: UserRole;
       avatar_url?: string | null;
+      tenant?: {
+        id: number;
+        name: string;
+        slug: string;
+      } | null;
       profile?: unknown;
     }
   | null;
@@ -29,6 +34,8 @@ type AuthContextValue = {
   refreshUser: () => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isTenantAdmin: boolean;
   isUser: boolean;
 };
 
@@ -61,6 +68,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             last_name: response.data.last_name,
             role: response.data.role || "user",
             avatar_url: response.data.avatar_url,
+            tenant: response.data.tenant || null,
             profile: response.data.profile,
           });
         } catch {
@@ -68,6 +76,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser({
             username: response.data.username,
             role: response.data.role || "user",
+            tenant: response.data.tenant || null,
           });
         }
       } catch (error) {
@@ -104,6 +113,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         last_name: response.data.last_name,
         role: response.data.role || "user",
         avatar_url: response.data.avatar_url,
+        tenant: response.data.tenant || null,
         profile: response.data.profile,
       });
     } catch (error) {
@@ -118,7 +128,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const isAdmin =
-    user?.role === "admin" || user?.role === "staff";
+    user?.role === "super_admin" ||
+    user?.role === "tenant_admin" ||
+    user?.role === "admin" ||
+    user?.role === "staff";
+  const isSuperAdmin = user?.role === "super_admin";
+  const isTenantAdmin = user?.role === "tenant_admin";
   const isUser = user?.role === "user";
 
   return (
@@ -130,6 +145,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         refreshUser,
         logout,
         isAdmin,
+        isSuperAdmin,
+        isTenantAdmin,
         isUser,
       }}
     >

@@ -1,63 +1,65 @@
-﻿from django.db.models import Sum, Q
+from django.db.models import Sum, Q
 from django.utils.timezone import now
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from tenants.scoping import apply_tenant_filter, get_current_tenant
+from core.permissions import IsSuperAdminOrTenantAdmin
 
 from orders.models import Order, OrderItem, Coupon
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def doanh_thu_hom_nay(request):
-    """Tính doanh thu hôm nay"""
+    """Tính doanh thu hôm nay theo tenant"""
+    from django.db.models import Sum
     today = now().date()
 
-    # Tính doanh thu từ các đơn hàng đã thanh toán hôm nay
-    orders_today = Order.objects.filter(
+    qs = Order.objects.filter(
         created_at__date=today,
         payment_status="paid"
     )
-    
-    tong_tien = sum(order.total_price for order in orders_today)
+    qs = apply_tenant_filter(qs, request)
+
+    tong_tien = sum(order.total_price for order in qs)
 
     return Response({"ngay": str(today), "doanh_thu": float(tong_tien)})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def doanh_thu_thang(request, year, month):
-    """Tính doanh thu trong tháng"""
-    # Tính doanh thu từ các đơn hàng đã thanh toán trong tháng
-    orders_month = Order.objects.filter(
+    """Tính doanh thu trong tháng theo tenant"""
+    qs = Order.objects.filter(
         created_at__year=year,
         created_at__month=month,
         payment_status="paid"
     )
-    
-    doanh_thu = sum(order.total_price for order in orders_month)
+    qs = apply_tenant_filter(qs, request)
+
+    doanh_thu = sum(order.total_price for order in qs)
     return Response({"nam": year, "thang": month, "doanh_thu": float(doanh_thu)})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def tong_xe_da_ban(request):
-    """Tính tổng số xe đã bán"""
-    # Tính tổng số xe đã bán từ các đơn hàng đã thanh toán
-    total = OrderItem.objects.filter(
-        order__payment_status="paid"
-    ).aggregate(total_sold=Sum("quantity"))["total_sold"] or 0
+    """Tính tổng số xe đã bán theo tenant"""
+    qs = OrderItem.objects.filter(order__payment_status="paid")
+    qs = apply_tenant_filter(qs, request)
+    total = qs.aggregate(total_sold=Sum("quantity"))["total_sold"] or 0
     return Response({"tong_xe_da_ban": total})
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def top_xe_ban_chay(request):
-    """Lấy top 5 xe bán chạy"""
-    # Lấy top 5 xe bán chạy từ các đơn hàng đã thanh toán
+    """Lấy top 5 xe bán chạy theo tenant"""
+    qs = OrderItem.objects.filter(order__payment_status="paid")
+    qs = apply_tenant_filter(qs, request)
     top = (
-        OrderItem.objects.filter(order__payment_status="paid")
-        .values("xe__ten_xe")
+        qs.values("xe__ten_xe")
         .annotate(total_sold=Sum("quantity"))
         .order_by("-total_sold")[:5]
     )
@@ -65,22 +67,26 @@ def top_xe_ban_chay(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def coupon_analytics(request):
-    """Analytics tổng quan về coupon usage"""
-    total_coupons = Coupon.objects.count()
-    active_coupons = Coupon.objects.filter(is_active=True).count()
-    used_coupons = Coupon.objects.filter(used_count__gt=0).count()
+    """Analytics tổng quan về coupon usage theo tenant"""
+    qs = Coupon.objects.all()
+    qs = apply_tenant_filter(qs, request)
 
-    # Tổng discount đã áp dụng
-    total_discount = Order.objects.filter(
+    total_coupons = qs.count()
+    active_coupons = qs.filter(is_active=True).count()
+    used_coupons = qs.filter(used_count__gt=0).count()
+
+    order_qs = Order.objects.filter(
         coupon__isnull=False,
         payment_status="paid"
-    ).aggregate(total=Sum("discount_amount"))["total"] or 0
+    )
+    order_qs = apply_tenant_filter(order_qs, request)
 
-    # Top coupons được sử dụng nhiều nhất
+    total_discount = order_qs.aggregate(total=Sum("discount_amount"))["total"] or 0
+
     top_coupons = (
-        Order.objects.filter(coupon__isnull=False, payment_status="paid")
+        order_qs
         .values("coupon__code", "coupon__description")
         .annotate(
             usage_count=Sum(1),
@@ -99,22 +105,25 @@ def coupon_analytics(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def coupon_usage_over_time(request):
-    """Thống kê coupon usage theo thời gian (7 ngày gần nhất)"""
+    """Thống kê coupon usage theo thời gian (7 ngày gần nhất) theo tenant"""
     from django.db.models.functions import TruncDate
     from datetime import timedelta
 
     end_date = now().date()
     start_date = end_date - timedelta(days=6)
 
+    order_qs = Order.objects.filter(
+        coupon__isnull=False,
+        payment_status="paid",
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    )
+    order_qs = apply_tenant_filter(order_qs, request)
+
     usage_data = (
-        Order.objects.filter(
-            coupon__isnull=False,
-            payment_status="paid",
-            created_at__date__gte=start_date,
-            created_at__date__lte=end_date
-        )
+        order_qs
         .annotate(date=TruncDate("created_at"))
         .values("date")
         .annotate(
@@ -124,7 +133,6 @@ def coupon_usage_over_time(request):
         .order_by("date")
     )
 
-    # Điền các ngày không có data
     result = []
     current_date = start_date
     usage_dict = {item["date"]: item for item in usage_data}
@@ -148,30 +156,25 @@ def coupon_usage_over_time(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsSuperAdminOrTenantAdmin])
 def coupon_performance(request):
-    """Hiệu suất của từng coupon"""
-    coupons = Coupon.objects.all().order_by("-used_count")
+    """Hiệu suất của từng coupon theo tenant"""
+    qs = Coupon.objects.all().order_by("-used_count")
+    qs = apply_tenant_filter(qs, request)
 
     coupon_data = []
-    for coupon in coupons:
-        # Tính conversion rate (tỷ lệ sử dụng)
-        orders_with_coupon = Order.objects.filter(
+    for coupon in qs:
+        order_qs = Order.objects.filter(
             coupon=coupon,
             payment_status="paid"
-        ).count()
+        )
+        order_qs = apply_tenant_filter(order_qs, request)
 
-        # Tính tổng discount
-        total_discount = Order.objects.filter(
-            coupon=coupon,
-            payment_status="paid"
-        ).aggregate(total=Sum("discount_amount"))["total"] or 0
+        orders_with_coupon = order_qs.count()
 
-        # Tính average order value khi dùng coupon
-        avg_order_value = Order.objects.filter(
-            coupon=coupon,
-            payment_status="paid"
-        ).aggregate(avg=Sum("base_price") / Sum(1))["avg"] or 0
+        total_discount = order_qs.aggregate(total=Sum("discount_amount"))["total"] or 0
+
+        avg_order_value = order_qs.aggregate(avg=Sum("base_price") / Sum(1))["avg"] or 0
 
         coupon_data.append({
             "code": coupon.code,
