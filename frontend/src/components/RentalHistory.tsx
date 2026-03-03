@@ -147,8 +147,8 @@ const RentalHistory = () => {
                         src={getImageUrl(car)}
                         alt={car.ten_xe || "Car"}
                         className="w-24 h-24 object-contain rounded-lg bg-gray-100 dark:bg-gray-600 p-2 transition-colors duration-300"
-                        onError={(e) => {
-                          e.target.src = "/images/img_car.png";
+                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                          e.currentTarget.src = "/images/img_car.png";
                         }}
                       />
                     </div>

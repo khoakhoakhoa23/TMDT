@@ -77,6 +77,9 @@ class ChatResponse:
     sources: List[Document] = field(default_factory=list)  # Tai lieu su dung
     requires_human: bool = False     # Co can chuyen tu van vien
     metadata: Dict[str, Any] = field(default_factory=dict)  # Thong tin bo sung
+    processing_time: float = 0.0     # Thoi gian xu ly (giay)
+    error: str = ""                  # Thong bao loi (neu co)
+    error_type: str = ""             # Loai loi (neu co)
 
 
 @dataclass

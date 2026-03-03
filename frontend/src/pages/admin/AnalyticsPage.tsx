@@ -18,9 +18,9 @@ const AnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
   const [revenueToday, setRevenueToday] = useState(0);
   const [totalCarsSold, setTotalCarsSold] = useState(0);
-  const [topSellingCars, setTopSellingCars] = useState([]);
-  const [revenueByMonth, setRevenueByMonth] = useState({});
-  const [revenueSeries, setRevenueSeries] = useState([]);
+  const [topSellingCars, setTopSellingCars] = useState<Array<{ten_xe?: string; xe__ten_xe?: string; so_luong?: number; total_sold?: number}>>([]);
+  const [revenueByMonth, setRevenueByMonth] = useState<{year: number; month: number; revenue: number}>({year: new Date().getFullYear(), month: new Date().getMonth() + 1, revenue: 0});
+  const [revenueSeries, setRevenueSeries] = useState<Array<{month: string; revenue: number}>>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [orders, setOrders] = useState([]);
@@ -325,7 +325,7 @@ const AnalyticsPage = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)} />
+                <Tooltip formatter={(value: number | string) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value))} />
                 <Legend />
                 <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
               </LineChart>

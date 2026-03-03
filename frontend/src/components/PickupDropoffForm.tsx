@@ -1,13 +1,40 @@
 import { useState, useEffect } from "react";
 import locationApi from "../api/locationApi";
 
+interface LocationData {
+  ten_dia_diem?: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface InitialData {
+  pickup?: {
+    location?: string;
+    date?: string;
+    time?: string;
+  };
+  dropoff?: {
+    location?: string;
+    date?: string;
+    time?: string;
+  };
+}
+
+interface PickupDropoffFormProps {
+  onSearch?: (data: {
+    pickup: { location: string; date: string; time: string };
+    dropoff: { location: string; date: string; time: string };
+  }) => void;
+  initialData?: InitialData;
+}
+
 const todayISO = () => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d.toISOString().slice(0, 10);
 };
 
-const addDaysISO = (base, days) => {
+const addDaysISO = (base: string, days: number) => {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
@@ -18,11 +45,11 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
   return `${hour}:00`;
 });
 
-const PickupDropoffForm = ({ onSearch, initialData }) => {
+const PickupDropoffForm: React.FC<PickupDropoffFormProps> = ({ onSearch, initialData }) => {
   const today = todayISO();
   const tomorrow = addDaysISO(today, 1);
 
-  const [locations, setLocations] = useState([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(true);
 
   const [pickup, setPickup] = useState({
@@ -37,7 +64,7 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
     time: initialData?.dropoff?.time || "17:00",
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load locations from API
   useEffect(() => {
@@ -45,7 +72,7 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
       try {
         const response = await locationApi.getAll();
         const locationList = response.data.results || response.data;
-        setLocations(locationList.map((loc) => loc.ten_dia_diem || loc.name || loc));
+        setLocations(locationList.map((loc: LocationData) => loc.ten_dia_diem || loc.name || (loc as unknown as string)));
       } catch (error) {
         console.error("Error fetching locations:", error);
         // Fallback to default locations if API fails
@@ -68,7 +95,7 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
 
   // Validation
   useEffect(() => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     
     if (!pickup.location) {
       newErrors.pickupLocation = "Vui lòng chọn địa điểm";
@@ -97,7 +124,7 @@ const PickupDropoffForm = ({ onSearch, initialData }) => {
 
   // Auto-update dropoff date if pickup date changes
   useEffect(() => {
-    if (pickup.date && dropoff.date < pickup.date) {
+    if (pickup.date && dropoff.date && dropoff.date < pickup.date) {
       setDropoff({ ...dropoff, date: pickup.date });
     }
   }, [pickup.date]);
