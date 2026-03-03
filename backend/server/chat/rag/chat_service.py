@@ -90,7 +90,7 @@ class ChatService:
                             self.ai_client = groq_client
                             self.use_gemini = False
                             self.use_groq = True
-                            print("OK: ChatService su dung GROQ AI")
+                            print("OK: ChatService using GROQ AI")
                         else:
                             raise Exception("Groq khong kha dung")
                     else:
@@ -107,7 +107,7 @@ class ChatService:
                         self.ai_client = gemini_client
                         self.use_gemini = True
                         self.use_groq = False
-                        print("✅ ChatService sử dụng Gemini AI")
+                        print("OK: ChatService using Gemini AI")
                     else:
                         raise Exception("Gemini không khả dụng")
                 except Exception:
@@ -115,7 +115,7 @@ class ChatService:
                     self.ai_client = get_openai_client()
                     self.use_gemini = False
                     self.use_groq = False
-                    print("⚠️ ChatService fallback về OpenAI")
+                    print("OK: ChatService using OpenAI AI")
 
         # Tu dong xay dung index
         if auto_build_index:

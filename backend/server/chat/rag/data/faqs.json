@@ -1,316 +1,126 @@
 [
-    {
-        "faq_id": "FAQ_GREETING",
-        "question": "Xin chào, bạn có thể giúp gì cho tôi?",
-        "answer": "Xin chào! 👋 Tôi là trợ lý ảo của TMDT - dịch vụ thuê xe ô tô hàng đầu. Tôi có thể giúp bạn:\n\n🚗 Tìm xe phù hợp: Sedan, SUV, MPV, xe sang\n💰 Báo giá thuê xe theo ngày\n📋 Tư vấn thủ tục thuê xe\n📍 Địa điểm giao/nhận xe\n💳 Thông tin thanh toán\n❓ Trả lời các câu hỏi thường gặp\n\nBạn cần hỗ trợ gì hôm nay?",
-        "category": "Chào hỏi",
-        "keywords": [
-            "xin chào",
-            "chào",
-            "hello",
-            "hi",
-            "hey",
-            "tôi cần giúp",
-            "trợ lý"
-        ]
-    },
-    {
-        "faq_id": "FAQ_001",
-        "question": "Thuê xe cần những giấy tờ gì?",
-        "answer": "Để thuê xe, bạn cần chuẩn bị: CMND/CCCD gốc, Giấy phép lái xe (loại B2 trở lên), và đặt cọc tiền mặt hoặc thế chấp xe máy. Nếu bạn là người nước ngoài, cần thêm hộ chiếu và visa valid.",
-        "category": "Thuê xe",
-        "keywords": [
-            "thuê xe",
-            "giấy tờ",
-            "điều kiện",
-            "CMND",
-            "GPLX"
-        ]
-    },
-    {
-        "faq_id": "FAQ_002",
-        "question": "Giá thuê xe có bao gồm xăng không?",
-        "answer": "Giá thuê xe không bao gồm xăng. Bạn sẽ nhận xe với bình xăng đầy và phải trả xe với mức xăng tương đương. Nếu trả xe thiếu xăng, phí sẽ được tính theo giá thị trường cộng thêm 10%.",
-        "category": "Thuê xe",
-        "keywords": [
-            "thuê xe",
-            "xăng",
-            "giá thuê",
-            "nhiên liệu"
-        ]
-    },
-    {
-        "faq_id": "FAQ_003",
-        "question": "Có thể giao xe tận nơi không?",
-        "answer": "Có, TMDT hỗ trợ giao xe tận nơi trong nội thành TP.HCM với phí 100.000 VNĐ. Với các tỉnh thành khác, phí giao xe sẽ được báo cụ thể theo khoảng cách. Đối với sân bay, chúng tôi có dịch vụ đón khách miễn phí.",
-        "category": "Dịch vụ",
-        "keywords": [
-            "giao xe",
-            "địa điểm",
-            "đón khách",
-            "sân bay"
-        ]
-    },
-    {
-        "faq_id": "FAQ_004",
-        "question": "Tôi có thể thuê xe ở địa điểm khác để trả không?",
-        "answer": "Có, bạn có thể thuê và trả xe ở các địa điểm khác nhau (one-way). Tuy nhiên, sẽ có phụ thu one-way từ 200.000 - 500.000 VNĐ tùy theo khoảng cách. Vui lòng liên hệ trước để được báo giá chính xác.",
-        "category": "Thuê xe",
-        "keywords": [
-            "thuê xe",
-            "trả xe",
-            "địa điểm",
-            "one-way"
-        ]
-    },
-    {
-        "faq_id": "FAQ_005",
-        "question": "Nếu xe hỏng hoặc gặp sự cố trong quá trình thuê thì sao?",
-        "answer": "Nếu xe gặp sự cố, hãy liên hệ ngay hotline 1900 xxxx. TMDT sẽ hỗ trợ 24/7. Trong trường hợp xe không thể tiếp tục di chuyển, chúng tôi sẽ cử xe đến hỗ trợ hoặc thay thế xe mới nếu cần thiết (miễn phí nếu lỗi từ phía công ty).",
-        "category": "Hỗ trợ",
-        "keywords": [
-            "xe hỏng",
-            "sự cố",
-            "hỗ trợ",
-            "hotline",
-            "24/7"
-        ]
-    },
-    {
-        "faq_id": "FAQ_006",
-        "question": "Tôi có thể thanh toán bằng những phương thức nào?",
-        "answer": "TMDT chấp nhận nhiều phương thức thanh toán: Tiền mặt, Chuyển khoản ngân hàng, Thẻ Visa/Mastercard, Điện tử (MoMo, ZaloPay, VNPay). Đối với hợp đồng dài hạn, có thể thanh toán theo tuần/tháng.",
-        "category": "Thanh toán",
-        "keywords": [
-            "thanh toán",
-            "tiền mặt",
-            "chuyển khoản",
-            "thẻ",
-            "ví điện tử"
-        ]
-    },
-    {
-        "faq_id": "FAQ_007",
-        "question": "Có cần tài xế không?",
-        "answer": "Bạn có thể tự lái xe nếu có GPLX phù hợp. Nếu muốn có tài xế, chúng tôi cung cấp dịch vụ tài xế với phí 300.000 VNĐ/ngày. Tài xế của TMDT am hiểu đường sá và thông thạo tiếng Anh nếu cần.",
-        "category": "Dịch vụ",
-        "keywords": [
-            "tài xế",
-            "lái xe",
-            "dịch vụ",
-            "GPLX"
-        ]
-    },
-    {
-        "faq_id": "FAQ_008",
-        "question": "Thuê xe máy có được không?",
-        "answer": "Hiện tại TMDT chỉ cung cấp dịch vụ thuê ô tô (4 chỗ, 7 chỗ, xe sang). Nếu bạn cần thuê xe máy, vui lòng liên hệ đối tác khác. Chúng tôi có thể giới thiệu nếu bạn cần.",
-        "category": "Thuê xe",
-        "keywords": [
-            "xe máy",
-            "motor",
-            "thuê xe",
-            "ô tô"
-        ]
-    },
-    {
-        "faq_id": "FAQ_009",
-        "question": "Thời gian mở cửa của TMDT?",
-        "answer": "TMDT làm việc từ 8:00 - 20:00 tất cả các ngày trong tuần (kể cả lễ, Tết). Dịch vụ hỗ trợ khẩn cấp 24/7 qua hotline. Bạn có thể đặt xe online 24/7 và nhận xác nhận trong giờ làm việc.",
-        "category": "Thông tin",
-        "keywords": [
-            "giờ làm việc",
-            "hotline",
-            "liên hệ",
-            "hỗ trợ"
-        ]
-    },
-    {
-        "faq_id": "FAQ_010",
-        "question": "Làm sao để đặt xe?",
-        "answer": "Bạn có thể đặt xe theo các cách sau: 1) Đặt trực tiếp tren website TMDT; 2) Gọi hotline 1900 xxxx; 3) Đến trực tiếp văn phòng TMDT; 4) Nhắn tin qua Zalo OA. Sau khi đặt, bạn sẽ nhận được xác nhận và thông tin chi tiết qua SMS/Email.",
-        "category": "Đặt xe",
-        "keywords": [
-            "đặt xe",
-            "booking",
-            "website",
-            "hotline",
-            "liên hệ"
-        ]
-    },
-    {
-        "faq_id": "FAQ_011",
-        "question": "Xe có bảo hiểm không?",
-        "answer": "Tất cả xe cho thuê đều có bảo hiểm trách nhiệm dân sự. Bạn có thể mua thêm bảo hiểm vật chất (CDW) với phí 10% giá thuê/ngày để giảm trách nhiệm bồi thường khi xảy ra tai nạn.",
-        "category": "Bảo hiểm",
-        "keywords": [
-            "bảo hiểm",
-            "TNDS",
-            "CDW",
-            "tai nạn"
-        ]
-    },
-    {
-        "faq_id": "FAQ_012",
-        "question": "Tôi có thể hủy đặt xe không?",
-        "answer": "Có thể hủy đặt xe theo chính sách: Hủy trước 48 giờ hoàn 100% tiền cọc; Hủy trước 24-48 giờ hoàn 50%; Hủy trong 24 giờ không hoàn tiền. Trường hợp bất khả kháng sẽ được xem xét riêng.",
-        "category": "Hủy đặt",
-        "keywords": [
-            "hủy đặt",
-            "hoàn tiền",
-            "chính sách"
-        ]
-    },
-    {
-        "faq_id": "FAQ_013",
-        "question": "Thuê dài hạn có giảm giá không?",
-        "answer": "Có! Thuê từ 7 ngày giảm 10%, từ 15 ngày giảm 15%, từ 30 ngày giảm 20%. Khách hàng thân thiết còn được tích điểm đổi quà. Sinh nhật được giảm thêm 5%.",
-        "category": "Khuyến mãi",
-        "keywords": [
-            "giảm giá",
-            "khuyến mãi",
-            "thuê dài hạn",
-            "ưu đãi"
-        ]
-    },
-    {
-        "faq_id": "FAQ_014",
-        "question": "Xe có được bảo dưỡng định kỳ không?",
-        "answer": "Tất cả xe đều được bảo dưỡng định kỳ theo tiêu chuẩn nhà sản xuất. Nếu xe cần bảo dưỡng trong thời gian thuê, TMDT sẽ thay xe miễn phí hoặc giảm 20% giá thuê ngày đó.",
-        "category": "Bảo dưỡng",
-        "keywords": [
-            "bảo dưỡng",
-            "bảo trì",
-            "chất lượng xe"
-        ]
-    },
-    {
-        "faq_id": "FAQ_015",
-        "question": "Tôi có thể gia hạn thuê xe không?",
-        "answer": "Có thể gia hạn bằng cách liên hệ trước ít nhất 24 giờ. Giá gia hạn bằng giá thuê ban đầu. Nếu gia hạn đột xuất (dưới 24h), có thể phụ thu 10% nếu xe đã có lịch đặt tiếp theo.",
-        "category": "Gia hạn",
-        "keywords": [
-            "gia hạn",
-            "kéo dài",
-            "thuê thêm"
-        ]
-    },
-    {
-        "faq_id": "FAQ_016",
-        "question": "Xe điện có sẵn không?",
-        "answer": "Có, TMDT có Vinfast VF8 - SUV điện 5 chỗ với pin 87.7 kWh, quãng đường 420km. Xe được giao với pin đầy 100%. Chúng tôi hỗ trợ thông tin trạm sạc gần nhất.",
-        "category": "Xe điện",
-        "keywords": [
-            "xe điện",
-            "VF8",
-            "Vinfast",
-            "pin",
-            "sạc"
-        ]
-    },
-    {
-        "faq_id": "FAQ_017",
-        "question": "Thuê xe đi du lịch nên chọn loại nào?",
-        "answer": "Tùy số người và hành trình: 2-4 người đi gần chọn Sedan (Camry, Civic); 5-7 người hoặc đường dài chọn SUV (Fortuner, CR-V); Đông người chọn MPV (Carnival, Xpander). Tư vấn viên sẽ gợi ý cụ thể theo nhu cầu.",
-        "category": "Tư vấn",
-        "keywords": [
-            "du lịch",
-            "chọn xe",
-            "tư vấn",
-            "SUV",
-            "sedan"
-        ]
-    },
-    {
-        "faq_id": "FAQ_018",
-        "question": "Xe có giới hạn số km không?",
-        "answer": "Mỗi ngày thuê được 250km miễn phí. Vượt quá sẽ tính phí 3.000 VNĐ/km. Đối với thuê dài hạn (từ 7 ngày), giới hạn có thể linh hoạt hơn, vui lòng trao đổi khi đặt xe.",
-        "category": "Thuê xe",
-        "keywords": [
-            "km",
-            "giới hạn",
-            "phí vượt km"
-        ]
-    },
-    {
-        "faq_id": "FAQ_019",
-        "question": "Tôi bị mất giấy tờ xe thì sao?",
-        "answer": "Hãy báo ngay cho TMDT và công an. Phí làm lại giấy tờ khoảng 500.000 - 1.000.000 VNĐ tùy loại giấy tờ. Nếu do lỗi khách hàng, khách hàng sẽ chịu chi phí này.",
-        "category": "Sự cố",
-        "keywords": [
-            "mất giấy tờ",
-            "cavet",
-            "đăng ký xe"
-        ]
-    },
-    {
-        "faq_id": "FAQ_020",
-        "question": "Xe có camera hành trình không?",
-        "answer": "Tất cả xe đều được lắp camera hành trình để đảm bảo an toàn. Dữ liệu camera chỉ được sử dụng khi có sự cố hoặc tranh chấp, đảm bảo quyền riêng tư của khách hàng.",
-        "category": "An toàn",
-        "keywords": [
-            "camera hành trình",
-            "an toàn",
-            "giám sát"
-        ]
-    },
-    {
-        "faq_id": "FAQ_021",
-        "question": "Tôi có thể cho người khác lái xe thuê không?",
-        "answer": "Người lái xe phải được đăng ký trong hợp đồng và có GPLX hợp lệ. Nếu muốn thêm người lái, vui lòng thông báo trước và cung cấp GPLX của họ. Phí thêm người lái là 300.000 VNĐ/ngày.",
-        "category": "Thuê xe",
-        "keywords": [
-            "người lái",
-            "GPLX",
-            "hợp đồng"
-        ]
-    },
-    {
-        "faq_id": "FAQ_022",
-        "question": "Xe có chuẩn bị ghế em bé không?",
-        "answer": "TMDT có ghế em bé miễn phí cho khách hàng có nhu cầu (số lượng có hạn). Vui lòng đặt trước khi booking để chúng tôi chuẩn bị. Ghế phù hợp cho trẻ từ 6 tháng đến 6 tuổi.",
-        "category": "Dịch vụ",
-        "keywords": [
-            "ghế em bé",
-            "trẻ em",
-            "an toàn"
-        ]
-    },
-    {
-        "faq_id": "FAQ_023",
-        "question": "So sánh Toyota Fortuner và Honda CR-V?",
-        "answer": "Fortuner: 7 chỗ, động cơ dầu, mạnh mẽ hơn, phù hợp đường dài/địa hình khó (2.5tr/ngày). CR-V: 5 chỗ, động cơ xăng, tiết kiệm hơn, êm ái hơn (1.8tr/ngày). Chọn Fortuner nếu cần 7 chỗ hoặc đi xa, chọn CR-V nếu 5 người và tiết kiệm.",
-        "category": "So sánh",
-        "keywords": [
-            "so sánh",
-            "Fortuner",
-            "CR-V",
-            "SUV"
-        ]
-    },
-    {
-        "faq_id": "FAQ_024",
-        "question": "Xe sang có phù hợp cho đám cưới không?",
-        "answer": "Có! Mercedes C-Class (4tr/ngày), BMW 5 Series (4.5tr/ngày), Lexus RX350 (5tr/ngày) rất phù hợp cho đám cưới. Xe sạch sẽ, sang trọng, có thể trang trí thêm. Đặt trước 1 tuần để đảm bảo có xe.",
-        "category": "Sự kiện",
-        "keywords": [
-            "đám cưới",
-            "xe sang",
-            "Mercedes",
-            "BMW",
-            "Lexus"
-        ]
-    },
-    {
-        "faq_id": "FAQ_025",
-        "question": "Tôi muốn mua xe cũ, TMDT có hỗ trợ không?",
-        "answer": "Có! TMDT hỗ trợ mua bán xe ô tô mới và cũ với giá cạnh tranh. Xe được kiểm tra kỹ, có bảo hành. Hỗ trợ vay mua xe lãi suất ưu đãi 0% trong 12 tháng nếu đủ điều kiện.",
-        "category": "Mua xe",
-        "keywords": [
-            "mua xe",
-            "xe cũ",
-            "vay mua xe",
-            "trả góp"
-        ]
-    }
+  {
+    "faq_id": "FAQ_001",
+    "question": "Thue xe can nhung giay to gi?",
+    "answer": "De thue xe, ban can chuan bi: CMND/CCCD goc, Giay phep lai xe (loai B2 tro len), va dat coc tien mat hoac the chap xe may. Neu ban la nguoi nuoc ngoai, can them ho chieu va visa valid.",
+    "category": "Thue xe",
+    "keywords": [
+      "thue xe",
+      "giay to",
+      "dieu kien",
+      "CMND",
+      "GPLX"
+    ]
+  },
+  {
+    "faq_id": "FAQ_002",
+    "question": "Gia thue xe co bao gom xang khong?",
+    "answer": "Gia thue xe khong bao gom xang. Ban se nhan xe voi binh xang day va phai tra xe voi muc xang tuong duong. Neu tra xe thieu xang, phi se duoc tinh theo gia thi truong cong them 10%.",
+    "category": "Thue xe",
+    "keywords": [
+      "thue xe",
+      "xang",
+      "gia thue",
+      "nhien lieu"
+    ]
+  },
+  {
+    "faq_id": "FAQ_003",
+    "question": "Co the giao xe tan noi khong?",
+    "answer": "Co, TMDT ho tro giao xe tan noi trong noi thanh TP.HCM voi phi 100.000 VND. Voi cac tinh thanh khac, phi giao xe se duoc bao cu the theo khoang cach. Doi voi san bay, chung toi co dich vu don khach mien phi.",
+    "category": "Dich vu",
+    "keywords": [
+      "giao xe",
+      "dia diem",
+      "don khach",
+      "san bay"
+    ]
+  },
+  {
+    "faq_id": "FAQ_004",
+    "question": "Toi co the thue xe o dia diem khac de tra khong?",
+    "answer": "Co, ban co the thue va tra xe o cac dia diem khac nhau (one-way). Tuy nhien, se co phu thu one-way tu 200.000 - 500.000 VND tuy theo khoang cach. Vui long lien he truoc de duoc bao gia chinh xac.",
+    "category": "Thue xe",
+    "keywords": [
+      "thue xe",
+      "tra xe",
+      "dia diem",
+      "one-way"
+    ]
+  },
+  {
+    "faq_id": "FAQ_005",
+    "question": "Neu xe hong hoac gap su co trong qua trinh thue thi sao?",
+    "answer": "Neu xe gap su co, hay lien he ngay hotline 1900 xxxx. TMDT se ho tro 24/7. Trong truong hop xe khong the tiep tuc di chuyen, chung toi se xe den ho tro hoac thay the xe moi neu can thiet (mien phi neu loi tu phia cong ty).",
+    "category": "Ho tro",
+    "keywords": [
+      "xe hong",
+      "su co",
+      "ho tro",
+      "hotline",
+      "24/7"
+    ]
+  },
+  {
+    "faq_id": "FAQ_006",
+    "question": "Toi co the thanh toan bang nhung phuong thuc nao?",
+    "answer": "TMDT chap nhan nhieu phuong thuc thanh toan: Tien mat, Chuyen khoan ngan hang, The Visa/Mastercard, Dien tu (MoMo, ZaloPay, VNPay). Doi voi hop dong dai han, co the thanh toan theo tuan/thang.",
+    "category": "Thanh toan",
+    "keywords": [
+      "thanh toan",
+      "tien mat",
+      "chuyen khoan",
+      "the",
+      "vi dien tu"
+    ]
+  },
+  {
+    "faq_id": "FAQ_007",
+    "question": "Co can tai xe khong?",
+    "answer": "Ban co the tu lai xe neu co GPLX phu hop. Neu muon co tai xe, chung toi cung cap dich vu tai xe voi phi 300.000 VND/ngay. Tai xe cua TMDT am hieu duong sa va thong thao tieng Anh neu can.",
+    "category": "Dich vu",
+    "keywords": [
+      "tai xe",
+      "lai xe",
+      "dich vu",
+      "GPLX"
+    ]
+  },
+  {
+    "faq_id": "FAQ_008",
+    "question": "Thue xe may co duoc khong?",
+    "answer": "Hien tai TMDT chi cung cap dich vu thue o to (4 cho, 7 cho, xe sang). Neu ban can thue xe may, vui long lien he doi tac khac. Chung toi co the gioi thieu neu ban can.",
+    "category": "Thue xe",
+    "keywords": [
+      "xe may",
+      "motor",
+      "thue xe",
+      "o to"
+    ]
+  },
+  {
+    "faq_id": "FAQ_009",
+    "question": "Thoi gian mo cua cua TMDT?",
+    "answer": "TMDT lam viec tu 8:00 - 20:00 tat ca cac ngay trong tuan (ke ca le, Tet). Dich vu ho tro khan cap 24/7 qua hotline. Ban co the dat xe online 24/7 va nhan xac nhan trong gio lam viec.",
+    "category": "Thong tin",
+    "keywords": [
+      "gio lam viec",
+      "hotline",
+      "lien he",
+      "ho tro"
+    ]
+  },
+  {
+    "faq_id": "FAQ_010",
+    "question": "Lam sao de dat xe?",
+    "answer": "Ban co the dat xe theo cac cach sau: 1) Dat truc tiep tren website TMDT; 2) Goi hotline 1900 xxxx; 3) Den truc tiep van phong TMDT; 4) Nhan tin qua Zalo OA. Sau khi dat, ban se nhan duoc xac nhan va thong tin chi tiet qua SMS/Email.",
+    "category": "Dat xe",
+    "keywords": [
+      "dat xe",
+      "booking",
+      "website",
+      "hotline",
+      "lien he"
+    ]
+  }
 ]

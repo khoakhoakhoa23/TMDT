@@ -22,6 +22,7 @@ urlpatterns = [
         name="swagger-ui",
     ),
     path("api/chat/", include("chat.urls")),
+    path("api/translation/", include("translation.urls")),
 ]
 
 # Serve media files in development

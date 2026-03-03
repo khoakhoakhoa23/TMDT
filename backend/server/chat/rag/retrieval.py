@@ -50,7 +50,7 @@ class RetrievalService:
                     from .local_embeddings import get_local_embedding_client
                     self.client = get_local_embedding_client()
                     if self.client.is_available():
-                        print("✅ RetrievalService sử dụng LOCAL Embeddings (MIỄN PHÍ!)")
+                        print("OK: Using LOCAL Embeddings")
                     else:
                         raise Exception("Local embeddings không khả dụng")
                 else:
@@ -61,11 +61,11 @@ class RetrievalService:
                     self.client = get_gemini_client()
                     if not self.client.is_available():
                         raise Exception("Gemini không khả dụng")
-                    print("✅ RetrievalService sử dụng Gemini")
+                    print("OK: Using Gemini for embeddings")
                 except Exception:
                     from .openai_client import get_openai_client
                     self.client = get_openai_client()
-                    print("⚠️ RetrievalService fallback về OpenAI")
+                    print("OK: Using OpenAI for embeddings")
         
         # Thiet lap thu muc index
         if index_dir is None:
