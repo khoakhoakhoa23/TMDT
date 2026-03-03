@@ -1,0 +1,69 @@
+[
+  {
+    "policy_id": "RENT_001",
+    "category": "Dat coc",
+    "title": "Chinh sach dat coc",
+    "content": "De dat xe, khach hang can dat coc 50% gia thue xe theo ngay. Tien coc se duoc hoan tra sau khi tra xe va kiem tra xe khong co hu hai.",
+    "conditions": [
+      "Dat coc 50%",
+      "Hoan tra khi tra xe",
+      "Khong hu hai"
+    ]
+  },
+  {
+    "policy_id": "RENT_002",
+    "category": "Giay to",
+    "title": "Yeu cau giay to thue xe",
+    "content": "Khach hang can cung cap: 1) CMND/CCCD goc; 2) Giay phep lai xe (B2 tro len); 3) Ho khau hoac KT3; 4) Dat coc tien mat hoac the chap xe may.",
+    "conditions": [
+      "CMND/CCCD",
+      "GPLX B2+",
+      "Ho khau/KT3",
+      "Dat coc"
+    ]
+  },
+  {
+    "policy_id": "RENT_003",
+    "category": "Phi phat sinh",
+    "title": "Cac loai phi phat sinh khi thue xe",
+    "content": "Phi phat sinh bao gom: Phi vuot so km quy dinh (3.000 VND/km); Phi lai xe them (300.000 VND/ngay); Phi don xe neu tra xe ban (200.000 VND); Phi tre gio tra (gia thue/24 x so gio tre).",
+    "conditions": [
+      "Vuot km: 3.000 VND/km",
+      "Lai xe them: 300.000 VND/ngay",
+      "Don xe: 200.000 VND",
+      "Tre gio: tinh theo gia thue"
+    ]
+  },
+  {
+    "policy_id": "RENT_004",
+    "category": "Bao hiem",
+    "title": "Bao hiem thue xe",
+    "content": "Gia thue xe da bao gom bao hiem trach nhiem dan su. Khach hang co the mua them bao hiem vat chat (CDW) voi phi 10% gia thue/ngay de giam trach nhiem boi thuong khi xay ra tai nan.",
+    "conditions": [
+      "Bao hiem TNDS: da bao gom",
+      "Bao hiem CDW: 10%/ngay"
+    ]
+  },
+  {
+    "policy_id": "CANCEL_001",
+    "category": "Huy dat",
+    "title": "Chinh sach huy dat xe",
+    "content": "Chinh sach huy dat: Huy truoc 48 gio: hoan 100% tien coc; Huy truoc 24-48 gio: hoan 50% tien coc; Huy trong 24 gio: khong hoan tien coc. Truong hop bat kha khang duoc xem xet rieng.",
+    "conditions": [
+      "48h truoc: hoan 100%",
+      "24-48h: hoan 50%",
+      "Duoi 24h: khong hoan"
+    ]
+  },
+  {
+    "policy_id": "SALE_001",
+    "category": "Ban xe",
+    "title": "Chinh sach ban xe",
+    "content": "TMDT ho tro mua ban xe o to moi va cu voi gia canh tranh. Khach hang duoc ho tro vay mua xe voi lai suat uu dai 0% trong 12 thang (neu du dieu kien).",
+    "conditions": [
+      "Gia canh tranh",
+      "Ho tro vay 0% 12 thang",
+      "Bao hanh chinh hang"
+    ]
+  }
+]

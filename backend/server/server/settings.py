@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework.authtoken",
     "djoser",
+    "translation",  # AI Translation App
     # "channels",  # Django Channels cho WebSocket - Uncomment sau khi cài: pip install channels channels-redis
 ]
 

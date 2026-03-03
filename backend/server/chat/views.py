@@ -266,7 +266,7 @@ class ChatBotView(APIView):
             )
         
         # Kiem tra co su dung RAG mode khong
-        use_rag = request.data.get('use_rag', True)  # Mac dinh bat RAG
+        use_rag = request.data.get('use_rag', False)  # Mac dinh tat RAG, su dung rule engine
         
         # Luu tin nhan nguoi dung
         user_message = ChatMessage.objects.create(
