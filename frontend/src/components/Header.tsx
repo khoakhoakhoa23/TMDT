@@ -6,6 +6,7 @@ import NotificationDropdown from "./NotificationDropdown";
 import WishlistPanel from "./WishlistPanel";
 import ThemeToggle from "./ThemeToggle";
 import notificationApi from "../api/notificationApi";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Header = () => {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ const Header = () => {
   const [token, setToken] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const menuRef = useRef(null);
   const notificationRef = useRef(null);
 
@@ -62,7 +64,12 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/category?search=${encodeURIComponent(searchQuery)}`);
+      navigate(
+        joinTenantPath(
+          tenantPrefix,
+          `/category?search=${encodeURIComponent(searchQuery)}`,
+        ),
+      );
     }
   };
 
@@ -71,7 +78,7 @@ const Header = () => {
     localStorage.removeItem("refresh_token");
     setToken(null);
     setShowProfileMenu(false);
-    navigate("/", { replace: true });
+    navigate(joinTenantPath(tenantPrefix, "/"), { replace: true });
   };
 
   const handleNotificationClick = () => {
@@ -93,7 +100,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to={joinTenantPath(tenantPrefix, "/")} className="flex items-center">
             <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-300">MORENT</span>
           </Link>
 
@@ -124,7 +131,7 @@ const Header = () => {
               {/* Filter Icon */}
               <button
                 type="button"
-                onClick={() => navigate("/category")}
+                onClick={() => navigate(joinTenantPath(tenantPrefix, "/category"))}
                 className="absolute right-3 top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-300"
               >
                 <svg
@@ -146,7 +153,7 @@ const Header = () => {
           
           {/* Mobile Search Button */}
           <button
-            onClick={() => navigate("/category")}
+            onClick={() => navigate(joinTenantPath(tenantPrefix, "/category"))}
             className="sm:hidden w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300"
           >
             <svg
@@ -298,7 +305,7 @@ const Header = () => {
                   {token ? (
                     <>
                       <Link
-                        to="/dashboard"
+                        to={joinTenantPath(tenantPrefix, "/dashboard")}
                         onClick={() => setShowProfileMenu(false)}
                         className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
                       >
@@ -325,7 +332,7 @@ const Header = () => {
                   ) : (
                     <>
                       <Link
-                        to="/login"
+                        to={joinTenantPath(tenantPrefix, "/login")}
                         onClick={() => setShowProfileMenu(false)}
                         className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
                       >
@@ -337,7 +344,7 @@ const Header = () => {
                         </div>
                       </Link>
                       <Link
-                        to="/register"
+                        to={joinTenantPath(tenantPrefix, "/register")}
                         onClick={() => setShowProfileMenu(false)}
                         className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
                       >

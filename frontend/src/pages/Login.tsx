@@ -4,7 +4,9 @@ import { useForm } from "react-hook-form";
 import authApi from "../api/authApi";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { getLoginRedirectPath } from "../utils/loginHelpers";
 import { useGoogleLogin } from "@react-oauth/google";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 // Kiểm tra xem có Google Client ID không
 const GOOGLE_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || "";
@@ -295,6 +297,7 @@ function GlassCard({ children, className = "" }: GlassCardProps) {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const { updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -336,7 +339,8 @@ export default function Login() {
           profile: res.data.user.profile,
         });
       }
-      const redirect = location.state?.from?.pathname || "/";
+      const redirect =
+        location.state?.from?.pathname || joinTenantPath(tenantPrefix, "/");
       navigate(redirect, { replace: true });
     } catch (err) {
       const errorMessage = err.response?.data?.detail || "Đăng nhập bằng Google thất bại!";
@@ -377,7 +381,8 @@ export default function Login() {
           profile: res.data.user.profile,
         });
       }
-      const redirect = location.state?.from?.pathname || "/";
+      const redirect =
+        location.state?.from?.pathname || joinTenantPath(tenantPrefix, "/");
       navigate(redirect, { replace: true });
     } catch (err) {
       const errorMessage = err.response?.data?.detail || "Đăng nhập bằng Facebook thất bại!";
@@ -395,8 +400,8 @@ export default function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (token) navigate("/");
-  }, [navigate]);
+    if (token) navigate(joinTenantPath(tenantPrefix, "/"));
+  }, [navigate, tenantPrefix]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -413,7 +418,7 @@ export default function Login() {
       try {
         try {
           const meRes = await authApi.getMe();
-          updateUser({
+          const userData = {
             id: meRes.data.id,
             username: meRes.data.username,
             email: meRes.data.email,
@@ -422,20 +427,33 @@ export default function Login() {
             role: meRes.data.role || "user",
             avatar_url: meRes.data.avatar_url,
             profile: meRes.data.profile,
-          });
+            tenant: meRes.data.tenant || null,
+            tenant_id: meRes.data.tenant_id || meRes.data.tenant?.id || null,
+          };
+          updateUser(userData);
+
+          // Redirect based on role and tenant
+          const redirectPath = getLoginRedirectPath(userData, "/");
+          navigate(redirectPath, { replace: true });
         } catch (meError) {
           const roleRes = await authApi.getUserRole();
-          updateUser({
+          const userData = {
             username: roleRes.data.username,
             role: roleRes.data.role || "user",
-          });
+            tenant: roleRes.data.tenant || null,
+            tenant_id: roleRes.data.tenant?.id || null,
+          };
+          updateUser(userData);
+
+          // Redirect based on role and tenant
+          const redirectPath = getLoginRedirectPath(userData, "/");
+          navigate(redirectPath, { replace: true });
         }
       } catch (roleError) {
         console.error("Error fetching user info:", roleError);
+        // Still redirect to default
+        navigate(joinTenantPath(tenantPrefix, "/"), { replace: true });
       }
-
-      const redirect = location.state?.from?.pathname || "/";
-      navigate(redirect, { replace: true });
     } catch (err) {
       const errorMessage = err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || "Sai tài khoản hoặc mật khẩu!";
       setError(errorMessage);
@@ -526,7 +544,7 @@ export default function Login() {
             {/* Forgot Password Link */}
             <div className="flex justify-end mb-2">
               <Link
-                to="/forgot-password"
+                to={joinTenantPath(tenantPrefix, "/forgot-password")}
                 className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300 hover:underline"
               >
                 Quên mật khẩu?
@@ -578,7 +596,7 @@ export default function Login() {
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 animate-[fadeIn_0.5s_ease-out_0.5s_both]">
               Chưa có tài khoản?{" "}
               <Link
-                to="/register"
+                to={joinTenantPath(tenantPrefix, "/register")}
                 className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-300 hover:underline"
               >
                 Đăng ký ngay

@@ -1,4 +1,5 @@
 import axios, { AxiosRequestHeaders, InternalAxiosRequestConfig } from "axios";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/";
@@ -10,7 +11,9 @@ const axiosClient = axios.create({
   },
 });
 
-const PUBLIC_PATHS = ["xe/", "loaixe/", "blog/", "location/"];
+// Paths that should work without requiring auth.
+// Important: public endpoints must still work even if a stale/invalid JWT exists in localStorage.
+const PUBLIC_PATHS = ["public/", "xe/", "loaixe/", "blog/", "location/"];
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -116,7 +119,11 @@ axiosClient.interceptors.response.use(
           return axiosClient(originalRequest);
         }
 
-        window.location.href = "/login";
+        const tenantPrefix =
+          typeof window !== "undefined"
+            ? getTenantPrefixFromPathname(window.location.pathname)
+            : null;
+        window.location.href = joinTenantPath(tenantPrefix, "/login");
         return Promise.reject(refreshError);
       }
     }

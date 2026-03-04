@@ -1,9 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const [logoError, setLogoError] = useState(false);
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
 
   return (
     <footer className="bg-gray-800 dark:bg-gray-900 text-white mt-auto transition-colors duration-300">
@@ -11,7 +14,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Column */}
           <div>
-            <Link to="/" className="flex items-center mb-4">
+            <Link to={joinTenantPath(tenantPrefix, "/")} className="flex items-center mb-4">
               {!logoError ? (
                 <img 
                   src="/images/img_footer_logo.png" 
@@ -70,12 +73,12 @@ const Footer = () => {
             <h4 className="font-semibold mb-4 text-gray-200 dark:text-gray-300 transition-colors duration-300">Về Chúng Tôi</h4>
             <ul className="space-y-2 text-sm text-gray-300 dark:text-gray-400">
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Danh Sách Xe
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/dashboard")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Tài Khoản
                 </Link>
               </li>
@@ -85,7 +88,7 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Xe Nổi Bật
                 </Link>
               </li>
@@ -133,22 +136,22 @@ const Footer = () => {
             <h4 className="font-semibold mb-4 text-gray-200 dark:text-gray-300 transition-colors duration-300">Dịch Vụ</h4>
             <ul className="space-y-2 text-sm text-gray-300 dark:text-gray-400">
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Thuê Xe Tự Lái
                 </Link>
               </li>
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Thuê Xe Có Tài Xế
                 </Link>
               </li>
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Xe Du Lịch
                 </Link>
               </li>
               <li>
-                <Link to="/category" className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
+                <Link to={joinTenantPath(tenantPrefix, "/category")} className="hover:text-white dark:hover:text-gray-200 transition-colors duration-300">
                   Xe Thương Mại
                 </Link>
               </li>

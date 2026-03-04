@@ -1,10 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
 
   const [token, setToken] = useState(() => localStorage.getItem("access_token"));
 
@@ -15,7 +17,7 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    navigate("/", { replace: true });
+    navigate(joinTenantPath(tenantPrefix, "/"), { replace: true });
   };
 
   return (
@@ -23,24 +25,26 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to={joinTenantPath(tenantPrefix, "/")} className="flex items-center">
             <span className="text-2xl font-bold text-blue-600">MORENT</span>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6 ml-8">
             <Link
-              to="/"
+              to={joinTenantPath(tenantPrefix, "/")}
               className={`font-semibold ${
-                location.pathname === "/" ? "text-blue-600" : "text-gray-700"
+                location.pathname === joinTenantPath(tenantPrefix, "/")
+                  ? "text-blue-600"
+                  : "text-gray-700"
               }`}
             >
               Home
             </Link>
             <Link
-              to="/category"
+              to={joinTenantPath(tenantPrefix, "/category")}
               className={`font-semibold ${
-                location.pathname.startsWith("/category")
+                location.pathname.startsWith(joinTenantPath(tenantPrefix, "/category"))
                   ? "text-blue-600"
                   : "text-gray-700"
               }`}
@@ -49,9 +53,9 @@ const Navbar = () => {
             </Link>
             {token && (
               <Link
-                to="/dashboard"
+                to={joinTenantPath(tenantPrefix, "/dashboard")}
                 className={`font-semibold ${
-                  location.pathname.startsWith("/dashboard")
+                  location.pathname.startsWith(joinTenantPath(tenantPrefix, "/dashboard"))
                     ? "text-blue-600"
                     : "text-gray-700"
                 }`}
@@ -107,13 +111,13 @@ const Navbar = () => {
             {!token ? (
               <>
                 <Link
-                  to="/login"
+                  to={joinTenantPath(tenantPrefix, "/login")}
                   className="px-4 py-2 font-semibold text-blue-600 hover:text-blue-700"
                 >
                   Login
                 </Link>
                 <Link
-                  to="/register"
+                  to={joinTenantPath(tenantPrefix, "/register")}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                 >
                   Register
@@ -122,7 +126,7 @@ const Navbar = () => {
             ) : (
               <>
                 <Link
-                  to="/dashboard"
+                  to={joinTenantPath(tenantPrefix, "/dashboard")}
                   className="px-4 py-2 font-semibold text-gray-700 hover:text-blue-600"
                 >
                   My Dashboard

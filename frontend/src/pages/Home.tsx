@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 import CarCard from "../components/CarCard";
 import HeroCard from "../components/HeroCard";
 import PickupDropoffForm from "../components/PickupDropoffForm";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Home = () => {
   const [popularCars, setPopularCars] = useState<any[]>([]);
   const [recommendationCars, setRecommendationCars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
 
   useEffect(() => {
     fetchCars();
@@ -70,7 +73,7 @@ const Home = () => {
               Popular Car
             </h2>
             <Link
-              to="/category"
+              to={joinTenantPath(tenantPrefix, "/category")}
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm sm:text-base transition-colors duration-200"
             >
               View All
@@ -98,7 +101,7 @@ const Home = () => {
               Recommendation Car
             </h2>
             <Link
-              to="/category"
+              to={joinTenantPath(tenantPrefix, "/category")}
               className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold text-sm sm:text-base transition-colors duration-200"
             >
               View All

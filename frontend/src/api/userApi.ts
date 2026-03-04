@@ -51,6 +51,23 @@ const userApi = {
   }) {
     return axiosClient.post("users/create-tenant-admin/", data);
   },
+
+  // Lấy danh sách tất cả users (Super Admin only)
+  getAllUsers(params?: {
+    tenant_id?: number;
+    role?: string;
+    is_active?: boolean;
+    search?: string;
+    page?: number;
+    page_size?: number;
+  }) {
+    return axiosClient.get("users/list-all/", { params });
+  },
+
+  // Lấy thống kê users (Super Admin only)
+  getUserStats() {
+    return axiosClient.get("users/stats/");
+  },
 };
 
 export default userApi;
