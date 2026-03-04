@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils.crypto import get_random_string
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import api_view, permission_classes, action
@@ -9,13 +10,13 @@ import os
 
 User = get_user_model()
 
-from users.models import Admin, NhanVien, KhachHang, NCC, UserProfile
+from users.models import Admin, NhanVien, KhachHang, NCC, UserProfile, UserRole, UserStatus
 from users.serializers import (
     AdminSerializer,
     NhanVienSerializer, KhachHangSerializer, NCCSerializer,
-    RegisterSerializer, UserSerializer
+    RegisterSerializer, UserSerializer, AdminUserSerializer
 )
-from core.permissions import IsSuperAdmin, IsSuperAdminOrTenantAdmin
+from core.permissions import IsSuperAdmin, IsSuperAdminOrTenantAdmin, IsTenantAccessible, validate_tenant_access
 from tenants.scoping import apply_tenant_filter, get_current_tenant
 
 
@@ -557,6 +558,139 @@ def create_tenant_admin(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def list_all_users(request):
+    """
+    Lấy danh sách tất cả users trong hệ thống (Super Admin only).
+    Hỗ trợ filter: tenant_id, role
+    """
+    from django.contrib.auth import get_user_model
+    from tenants.models import Tenant
+    from users.models import UserRole
+
+    # Check super admin
+    profile = getattr(request.user, "profile", None)
+    if not profile or (request.user.is_superuser is False and profile.role != UserRole.SUPER_ADMIN):
+        return Response(
+            {"detail": "Chỉ Super Admin mới có quyền xem danh sách tất cả users."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    User = get_user_model()
+
+    # Get filter params
+    tenant_id = request.query_params.get("tenant_id")
+    role = request.query_params.get("role")
+    is_active = request.query_params.get("is_active")
+    search = request.query_params.get("search")
+
+    # Start with all users
+    users = User.objects.select_related("profile__tenant").all().order_by("-date_joined")
+
+    # Filter by tenant
+    if tenant_id:
+        users = users.filter(profile__tenant_id=tenant_id)
+
+    # Filter by role
+    if role:
+        if role == "super_admin":
+            users = users.filter(is_superuser=True)
+        elif role == "tenant_admin":
+            users = users.filter(is_superuser=False, profile__role=UserRole.TENANT_ADMIN)
+        elif role == "staff":
+            users = users.filter(is_superuser=False, profile__role=UserRole.EMPLOYEE)
+        elif role == "customer":
+            users = users.filter(is_superuser=False, profile__role=UserRole.CUSTOMER)
+
+    # Filter by is_active
+    if is_active is not None:
+        is_active_bool = is_active.lower() == "true"
+        users = users.filter(is_active=is_active_bool)
+
+    # Search by username, email, first_name, last_name
+    if search:
+        users = users.filter(
+            models.Q(username__icontains=search) |
+            models.Q(email__icontains=search) |
+            models.Q(first_name__icontains=search) |
+            models.Q(last_name__icontains=search)
+        )
+
+    # Pagination
+    from rest_framework.pagination import PageNumberPagination
+    paginator = PageNumberPagination()
+    paginator.page_size = request.query_params.get("page_size", 20)
+    page = paginator.paginate_queryset(users, request)
+
+    serializer = UserSerializer(page, many=True, context={"request": request})
+
+    return paginator.get_paginated_response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_user_stats(request):
+    """
+    Lấy thống kê users (Super Admin only)
+    """
+    from django.contrib.auth import get_user_model
+    from tenants.models import Tenant
+    from users.models import UserRole, UserStatus
+
+    # Check super admin
+    profile = getattr(request.user, "profile", None)
+    if not profile or (request.user.is_superuser is False and profile.role != UserRole.SUPER_ADMIN):
+        return Response(
+            {"detail": "Chỉ Super Admin mới có quyền xem thống kê."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    User = get_user_model()
+
+    # Total users
+    total_users = User.objects.count()
+
+    # Active users
+    active_users = User.objects.filter(is_active=True).count()
+
+    # By role
+    super_admins = User.objects.filter(is_superuser=True).count()
+    tenant_admins = User.objects.filter(is_superuser=False, profile__role=UserRole.TENANT_ADMIN).count()
+    staff = User.objects.filter(is_superuser=False, profile__role=UserRole.EMPLOYEE).count()
+    customers = User.objects.filter(is_superuser=False, profile__role=UserRole.CUSTOMER).count()
+
+    # By tenant
+    tenants_with_users = Tenant.objects.annotate(
+        user_count=models.Count("user_profiles")
+    ).values("id", "name", "code", "slug", "user_count")
+
+    return Response({
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": total_users - active_users,
+        "by_role": {
+            "super_admin": super_admins,
+            "tenant_admin": tenant_admins,
+            "staff": staff,
+            "customer": customers
+        },
+        "by_tenant": list(tenants_with_users)
+    })
+
+    return Response({
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": total_users - active_users,
+        "by_role": {
+            "super_admin": super_admins,
+            "tenant_admin": tenant_admins,
+            "user": regular_users
+        },
+        "by_tenant": list(tenants_with_users)
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def get_me(request):
     """Lấy thông tin đầy đủ của user hiện tại bao gồm avatar"""
     from users.serializers import UserSerializer
@@ -904,14 +1038,22 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsSuperAdminOrTenantAdmin]
 
     def get_queryset(self):
+        from tenants.scoping import get_tenant_from_request
         qs = User.objects.all().order_by("-date_joined").select_related()
         user = self.request.user
+        
+        # SUPER_ADMIN: xem được mọi user
         if user.is_superuser:
             return qs
-        # Tenant admin: chỉ thấy user cùng tenant (qua profile)
-        tenant_id = getattr(getattr(user, "profile", None), "tenant_id", None)
+        
+        # Lấy tenant_id từ JWT (nguồn tin cậy)
+        tenant_id = get_tenant_from_request(self.request)
+        
         if not tenant_id:
+            # Tenant admin không có tenant → không xem được user nào
             return User.objects.none()
+        
+        # Tenant admin: chỉ thấy user cùng tenant (qua profile)
         return qs.filter(profile__tenant_id=tenant_id, is_superuser=False)
 
     def perform_create(self, serializer):
@@ -986,3 +1128,304 @@ class UserViewSet(viewsets.ModelViewSet):
         user.is_active = True
         user.save(update_fields=["is_active"])
         return Response({"success": True, "is_active": user.is_active})
+
+
+# ==================== Tenant-based Admin APIs ====================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated, IsTenantAccessible])
+def tenant_users(request, tenantId):
+    """
+    GET: Lấy danh sách users của một tenant cụ thể
+         URL: /api/admin/tenants/:tenantId/users
+         Query params: page, page_size, role, status, search
+    
+    POST: Tạo user mới trong tenant
+          URL: /api/admin/tenants/:tenantId/users
+    """
+    from tenants.models import Tenant
+    from django.contrib.auth import get_user_model
+    
+    # Validate tenant exists
+    try:
+        tenant = Tenant.objects.get(id=tenantId)
+    except Tenant.DoesNotExist:
+        return Response(
+            {"detail": "Tenant không tồn tại"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Validate quyền truy cập (sẽ raise PermissionDenied nếu không được phép)
+    # Hỗ trợ cả tenantId và tenant_id từ URL
+    validate_tenant_access(request.user, str(tenantId))
+    
+    if request.method == "GET":
+        # Get filter params
+        page = int(request.query_params.get("page", 1))
+        page_size = int(request.query_params.get("page_size", 20))
+        role = request.query_params.get("role")
+        status_filter = request.query_params.get("status")
+        search = request.query_params.get("search")
+        
+        # Validate pagination
+        if page_size > 100:
+            page_size = 100
+        if page_size < 1:
+            page_size = 20
+        
+        # Base queryset - chỉ lấy users thuộc tenant này
+        users = User.objects.select_related("profile__tenant").filter(
+            profile__tenant_id=tenantId
+        ).order_by("-date_joined")
+        
+        # Filter by role
+        if role:
+            if role == UserRole.SUPER_ADMIN:
+                users = users.filter(is_superuser=True)
+            elif role == UserRole.TENANT_ADMIN:
+                users = users.filter(is_superuser=False, profile__role=UserRole.TENANT_ADMIN)
+            elif role == UserRole.EMPLOYEE:
+                users = users.filter(is_superuser=False, profile__role=UserRole.EMPLOYEE)
+            elif role == UserRole.CUSTOMER:
+                users = users.filter(is_superuser=False, profile__role=UserRole.CUSTOMER)
+        
+        # Filter by status
+        if status_filter:
+            if status_filter == UserStatus.ACTIVE:
+                users = users.filter(is_active=True)
+            elif status_filter == UserStatus.LOCKED:
+                users = users.filter(is_active=False)
+        
+        # Search
+        if search:
+            users = users.filter(
+                models.Q(username__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(first_name__icontains=search) |
+                models.Q(last_name__icontains=search)
+            )
+        
+        # Pagination
+        from rest_framework.pagination import PageNumberPagination
+        paginator = PageNumberPagination()
+        paginator.page_size = page_size
+        page_obj = paginator.paginate_queryset(users, request)
+        
+        serializer = AdminUserSerializer(page_obj, many=True, context={"request": request})
+        
+        return Response({
+            "count": paginator.page.paginator.count,
+            "next": paginator.get_next_link(),
+            "previous": paginator.get_previous_link(),
+            "results": serializer.data
+        })
+    
+    elif request.method == "POST":
+        # Tạo user mới trong tenant
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password")
+        first_name = request.data.get("first_name", "")
+        last_name = request.data.get("last_name", "")
+        role = request.data.get("role", UserRole.CUSTOMER)
+        
+        if not username:
+            return Response(
+                {"detail": "Username là bắt buộc"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not password:
+            return Response(
+                {"detail": "Password là bắt buộc"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate role
+        if role not in [UserRole.TENANT_ADMIN, UserRole.EMPLOYEE, UserRole.CUSTOMER]:
+            return Response(
+                {"detail": "Role không hợp lệ. Chỉ chấp nhận: TENANT_ADMIN, STAFF, CUSTOMER"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check username exists
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"detail": "Username đã tồn tại"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check email exists
+        if email and User.objects.filter(email=email).exists():
+            return Response(
+                {"detail": "Email đã tồn tại"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Tạo user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            is_active=True
+        )
+        
+        # Tạo profile với tenant và role
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.tenant = tenant
+        profile.role = role
+        profile.status = UserStatus.ACTIVE
+        profile.save()
+        
+        serializer = AdminUserSerializer(user, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@permission_classes([IsAuthenticated, IsTenantAccessible])
+def tenant_user_detail(request, tenantId, userId):
+    """
+    GET: Lấy chi tiết một user
+         URL: /api/admin/tenants/:tenantId/users/:userId
+    
+    PUT/PATCH: Cập nhật thông tin user
+               URL: /api/admin/tenants/:tenantId/users/:userId
+    
+    DELETE: Xóa (soft delete) user
+            URL: /api/admin/tenants/:tenantId/users/:userId
+    """
+    from tenants.models import Tenant
+    from django.contrib.auth import get_user_model
+    
+    # Validate tenant exists
+    try:
+        tenant = Tenant.objects.get(id=tenantId)
+    except Tenant.DoesNotExist:
+        return Response(
+            {"detail": "Tenant không tồn tại"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Validate quyền truy cập
+    validate_tenant_access(request.user, str(tenantId))
+    
+    # Get user
+    try:
+        user = User.objects.select_related("profile__tenant").get(
+            id=userId,
+            profile__tenant_id=tenantId
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "User không tồn tại trong tenant này"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if request.method == "GET":
+        serializer = AdminUserSerializer(user, context={"request": request})
+        return Response(serializer.data)
+    
+    elif request.method in ["PUT", "PATCH"]:
+        # Cập nhật user
+        user.username = request.data.get("username", user.username)
+        user.email = request.data.get("email", user.email)
+        user.first_name = request.data.get("first_name", user.first_name)
+        user.last_name = request.data.get("last_name", user.last_name)
+        
+        password = request.data.get("password")
+        if password:
+            user.set_password(password)
+        
+        user.save()
+        
+        # Cập nhật profile
+        profile = user.profile
+        if "role" in request.data:
+            role = request.data.get("role")
+            if role in [UserRole.TENANT_ADMIN, UserRole.EMPLOYEE, UserRole.CUSTOMER]:
+                profile.role = role
+        
+        if "status" in request.data:
+            status_val = request.data.get("status")
+            if status_val in [UserStatus.ACTIVE, UserStatus.LOCKED]:
+                profile.status = status_val
+                user.is_active = (status_val == UserStatus.ACTIVE)
+                user.save(update_fields=["is_active"])
+        
+        profile.save()
+        
+        serializer = AdminUserSerializer(user, context={"request": request})
+        return Response(serializer.data)
+    
+    elif request.method == "DELETE":
+        # Soft delete user
+        from django.utils import timezone
+        profile = user.profile
+        profile.deleted_at = timezone.now()
+        profile.status = UserStatus.LOCKED
+        profile.save()
+        
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def tenant_stats(request, tenantId):
+    """
+    Lấy thống kê của một tenant
+    URL: /api/admin/tenants/:tenantId/stats
+    """
+    from tenants.models import Tenant
+    from django.contrib.auth import get_user_model
+    
+    # Validate tenant exists
+    try:
+        tenant = Tenant.objects.get(id=tenantId)
+    except Tenant.DoesNotExist:
+        return Response(
+            {"detail": "Tenant không tồn tại"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Validate quyền truy cập
+    validate_tenant_access(request.user, str(tenantId))
+    
+    # Thống kê
+    total_users = User.objects.filter(profile__tenant_id=tenantId).count()
+    active_users = User.objects.filter(profile__tenant_id=tenantId, is_active=True).count()
+    
+    # By role
+    tenant_admins = User.objects.filter(
+        profile__tenant_id=tenantId, 
+        profile__role=UserRole.TENANT_ADMIN
+    ).count()
+    staff = User.objects.filter(
+        profile__tenant_id=tenantId, 
+        profile__role=UserRole.EMPLOYEE
+    ).count()
+    customers = User.objects.filter(
+        profile__tenant_id=tenantId, 
+        profile__role=UserRole.CUSTOMER
+    ).count()
+    
+    return Response({
+        "tenant": {
+            "id": str(tenant.id),
+            "name": tenant.name,
+            "code": tenant.code,
+            "status": tenant.status
+        },
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": total_users - active_users,
+        "by_role": {
+            "tenant_admin": tenant_admins,
+            "staff": staff,
+            "customer": customers
+        }
+    })

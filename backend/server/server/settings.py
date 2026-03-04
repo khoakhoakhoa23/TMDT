@@ -95,7 +95,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "tenants.middleware.TenantMiddleware",
+    "tenants.tenant_middleware.TenantMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -331,6 +331,7 @@ if os.getenv("USE_IN_MEMORY_CHANNELS", "False") == "True":
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "TOKEN_OBTAIN_SERIALIZER": "users.serializers.TokenObtainPairSerializer",
 }
 
 DJOSER = {

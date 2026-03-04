@@ -5,11 +5,13 @@ import reviewApi from "../api/reviewApi";
 import carImageApi from "../api/carImageApi";
 import CarCard from "../components/CarCard";
 import ReviewCard from "../components/ReviewCard";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Detail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const [car, setCar] = useState(null);
   const [recentCars, setRecentCars] = useState([]);
   const [recommendationCars, setRecommendationCars] = useState([]);
@@ -99,7 +101,9 @@ const Detail = () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
       alert("Vui lòng đăng nhập để đánh giá");
-      navigate("/login", { state: { from: location.pathname } });
+      navigate(joinTenantPath(tenantPrefix, "/login"), {
+        state: { from: location.pathname },
+      });
       return;
     }
 
@@ -155,10 +159,12 @@ const Detail = () => {
   const handleRentNow = () => {
     const token = localStorage.getItem("access_token");
     if (!token) {
-      navigate("/login", { state: { from: location.pathname } });
+      navigate(joinTenantPath(tenantPrefix, "/login"), {
+        state: { from: location.pathname },
+      });
       return;
     }
-    navigate("/payment", { state: { car } });
+    navigate(joinTenantPath(tenantPrefix, "/payment"), { state: { car } });
   };
 
   // Get image URLs for gallery
@@ -547,7 +553,7 @@ const Detail = () => {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recent Car</h3>
-              <Link to="/category" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
+              <Link to={joinTenantPath(tenantPrefix, "/category")} className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
                 View All
               </Link>
             </div>
@@ -566,7 +572,7 @@ const Detail = () => {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recomendation Car</h3>
-              <Link to="/category" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
+              <Link to={joinTenantPath(tenantPrefix, "/category")} className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold transition-colors duration-300">
                 View All
               </Link>
             </div>

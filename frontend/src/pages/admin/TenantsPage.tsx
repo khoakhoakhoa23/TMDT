@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import tenantApi, { Tenant } from "../../api/tenantApi";
 import userApi from "../../api/userApi";
 
 const TenantsPage = () => {
   const { isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,16 +23,27 @@ const TenantsPage = () => {
   });
   const [adminFormErrors, setAdminFormErrors] = useState<Record<string, string>>({});
   const [adminSubmitting, setAdminSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    code: string;
+    slug: string;
+    address: string;
+    phone: string;
+    email: string;
+    is_active: boolean;
+    status: "ACTIVE" | "INACTIVE";
+  }>({
     name: "",
+    code: "",
     slug: "",
     address: "",
     phone: "",
     email: "",
     is_active: true,
+    status: "ACTIVE",
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -62,21 +75,25 @@ const TenantsPage = () => {
       setEditingTenant(tenant);
       setFormData({
         name: tenant.name || "",
+        code: tenant.code || "",
         slug: tenant.slug || "",
         address: tenant.address || "",
         phone: tenant.phone || "",
         email: tenant.email || "",
         is_active: tenant.is_active !== undefined ? tenant.is_active : true,
+        status: tenant.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
       });
     } else {
       setEditingTenant(null);
       setFormData({
         name: "",
+        code: "",
         slug: "",
         address: "",
         phone: "",
         email: "",
         is_active: true,
+        status: "ACTIVE",
       });
     }
     setFormErrors({});
@@ -88,11 +105,13 @@ const TenantsPage = () => {
     setEditingTenant(null);
     setFormData({
       name: "",
+      code: "",
       slug: "",
       address: "",
       phone: "",
       email: "",
       is_active: true,
+      status: "ACTIVE",
     });
     setFormErrors({});
   };
@@ -110,6 +129,12 @@ const TenantsPage = () => {
 
     if (!formData.name.trim()) {
       errors.name = "Tên tenant không được để trống";
+    }
+
+    if (!formData.code.trim()) {
+      errors.code = "Mã tenant không được để trống";
+    } else if (!/^[A-Z0-9]+$/.test(formData.code.toUpperCase())) {
+      errors.code = "Mã tenant chỉ chứa chữ in hoa và số";
     }
 
     if (!formData.slug.trim()) {
@@ -142,7 +167,7 @@ const TenantsPage = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       await tenantApi.delete(id);
       await fetchData();
@@ -162,6 +187,11 @@ const TenantsPage = () => {
       console.error("Toggle error", err);
       alert(err?.response?.data?.detail || "Lỗi khi cập nhật trạng thái");
     }
+  };
+
+  // Navigate to tenant users page
+  const handleViewUsers = (tenantId: string) => {
+    navigate(`/admin/tenants/${tenantId}/users`);
   };
 
   // Open admin creation modal
@@ -227,7 +257,7 @@ const TenantsPage = () => {
     setAdminSubmitting(true);
     try {
       await userApi.createTenantAdmin({
-        tenant_id: selectedTenant.id,
+        tenant_id: Number(selectedTenant.id),
         username: adminFormData.username,
         password: adminFormData.password,
         email: adminFormData.email,
@@ -323,9 +353,10 @@ const TenantsPage = () => {
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mã</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tên</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Slug</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Liên hệ</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trạng thái</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Thao tác</th>
             </tr>
@@ -333,7 +364,7 @@ const TenantsPage = () => {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {tenants.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                   Chưa có tenant nào
                 </td>
               </tr>
@@ -341,13 +372,18 @@ const TenantsPage = () => {
               tenants.map((tenant) => (
                 <tr key={tenant.id} className="hover:bg-gray-50 dark:hover:bg-gray-900">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{tenant.id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-gray-100">{tenant.code}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{tenant.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded">{tenant.slug}</code>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {tenant.email && <div>{tenant.email}</div>}
-                    {tenant.phone && <div>{tenant.phone}</div>}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => handleViewUsers(tenant.id)}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                    >
+                      {tenant.user_count || 0} users
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
@@ -362,6 +398,12 @@ const TenantsPage = () => {
                     </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleViewUsers(tenant.id)}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                    >
+                      Xem Users
+                    </button>
                     <button
                       onClick={() => handleOpenAdminModal(tenant)}
                       className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 mr-3"
@@ -411,6 +453,23 @@ const TenantsPage = () => {
                   placeholder="Công ty ABC"
                 />
                 {formErrors.name && <p className="text-red-500 text-sm mt-1">{formErrors.name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mã Tenant *
+                </label>
+                <input
+                  type="text"
+                  name="code"
+                  value={formData.code}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 ${
+                    formErrors.code ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="CONGTYABC"
+                />
+                {formErrors.code && <p className="text-red-500 text-sm mt-1">{formErrors.code}</p>}
               </div>
 
               <div>

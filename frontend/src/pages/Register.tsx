@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import authApi from "../api/authApi";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 // Floating Input Component với animation
 function FloatingInput({ name, type, placeholder, disabled, error, register, label }) {
@@ -134,6 +135,8 @@ function BackgroundDecorations() {
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -151,8 +154,8 @@ export default function Register() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (token) navigate("/");
-  }, [navigate]);
+    if (token) navigate(joinTenantPath(tenantPrefix, "/"));
+  }, [navigate, tenantPrefix]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -184,7 +187,7 @@ export default function Register() {
   };
 
   const handleLoginClick = () => {
-    navigate("/login");
+    navigate(joinTenantPath(tenantPrefix, "/login"));
   };
 
   return (
@@ -308,7 +311,7 @@ export default function Register() {
                 <p className="text-gray-600 dark:text-gray-400 animate-[fadeIn_0.5s_ease-out_0.5s_both]">
                   Đã có tài khoản?{" "}
                   <Link
-                    to="/login"
+                    to={joinTenantPath(tenantPrefix, "/login")}
                     className="text-purple-600 dark:text-purple-400 font-semibold hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-300 hover:underline"
                   >
                     Đăng nhập ngay

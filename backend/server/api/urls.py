@@ -3,7 +3,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from products.views import LocationViewSet, LoaiXeViewSet, XeViewSet, BlogPostViewSet, ReviewViewSet, CarImageViewSet, WishlistViewSet
-from users.views import NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, request_password_reset, reset_password, verify_email, resend_verification_email, create_tenant_admin
+from users.views import (
+    NhanVienViewSet, KhachHangViewSet, NCCViewSet, RegisterAPIView, user_role, UserViewSet, 
+    update_profile, change_password, get_me, upload_avatar, google_login, facebook_login, 
+    request_password_reset, reset_password, verify_email, resend_verification_email, 
+    create_tenant_admin, list_all_users, get_user_stats,
+    tenant_users, tenant_user_detail, tenant_stats
+)
 from orders.views import HoaDonNhapViewSet, ChiTietHDNViewSet, HoaDonXuatViewSet, ChiTietHDXViewSet, BaoHanhViewSet
 from orders.views_commerce import CartViewSet, CartItemViewSet, OrderViewSet, checkout, generate_export_invoices, get_completed_orders_without_invoice
 from orders.api_views import (
@@ -16,7 +22,13 @@ from orders.api_views import (
 )
 from payments.views import PaymentViewSet, payment_callback
 from core.views import NotificationViewSet
-from tenants.views import TenantViewSet
+from tenants.views import (
+    TenantViewSet,
+    public_tenant_detail,
+    public_tenant_detail_by_key,
+    public_tenant_by_slug,
+)
+from tenants.api_views import MyTenantAPIView
 from analytics.views import (
     doanh_thu_hom_nay, doanh_thu_thang, tong_xe_da_ban, top_xe_ban_chay,
     coupon_analytics, coupon_usage_over_time, coupon_performance
@@ -48,6 +60,13 @@ router.register(r"tenants", TenantViewSet, basename="tenants")
 
 urlpatterns = [
     path("", include(router.urls)),
+
+    # ========== Public Tenant APIs (Không yêu cầu auth) ==========
+    path("public/tenants/<int:tenant_id>/", public_tenant_detail, name="public_tenant_detail"),
+    # Supports string tenant keys (slug/code), e.g. /api/public/tenants/tenant7/
+    path("public/tenants/<str:tenant_key>/", public_tenant_detail_by_key, name="public_tenant_detail_by_key"),
+    path("public/tenants/slug/<str:slug>/", public_tenant_by_slug, name="public_tenant_by_slug"),
+
     path("register/", RegisterAPIView.as_view(), name="register"),
     path("login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("google-login/", google_login, name="google_login"),
@@ -65,6 +84,8 @@ urlpatterns = [
     path("users/request-password-reset/", request_password_reset, name="request_password_reset"),
     path("users/reset-password/", reset_password, name="reset_password"),
     path("users/create-tenant-admin/", create_tenant_admin, name="create_tenant_admin"),
+    path("users/list-all/", list_all_users, name="list_all_users"),
+    path("users/stats/", get_user_stats, name="get_user_stats"),
     path("thongke/doanhthu-homnay/", doanh_thu_hom_nay),
     path("thongke/doanhthu/<int:year>/<int:month>/", doanh_thu_thang),
     path("thongke/tong-xe-da-ban/", tong_xe_da_ban),
@@ -84,4 +105,14 @@ urlpatterns = [
     # Hóa đơn xuất
     path("orders/generate-export-invoices/", generate_export_invoices, name="generate_export_invoices"),
     path("orders/completed-without-invoice/", get_completed_orders_without_invoice, name="completed_orders_without_invoice"),
+    
+    # ========== Tenant-based Admin APIs ==========
+    # /api/tenant/me/ - Get/Patch current tenant info (TENANT_ADMIN only)
+    path("tenant/me/", MyTenantAPIView.as_view(), name="my_tenant"),
+    # /api/admin/tenants/:tenantId/users - List/Create users in tenant
+    path("admin/tenants/<int:tenantId>/users/", tenant_users, name="tenant_users"),
+    # /api/admin/tenants/:tenantId/users/:userId - Get/Update/Delete specific user
+    path("admin/tenants/<int:tenantId>/users/<int:userId>/", tenant_user_detail, name="tenant_user_detail"),
+    # /api/admin/tenants/:tenantId/stats - Get tenant statistics
+    path("admin/tenants/<int:tenantId>/stats/", tenant_stats, name="tenant_stats"),
 ]

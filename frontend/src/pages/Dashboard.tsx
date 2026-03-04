@@ -1,24 +1,83 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 import orderApi from "../api/orderApi";
 import carApi from "../api/carApi";
+import statsApi from "../api/statsApi";
 import MapView from "../components/MapView";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [latestOrder, setLatestOrder] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null); // Order được chọn từ Recent Transaction
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [carRentalStats, setCarRentalStats] = useState([]);
   const [totalRentals, setTotalRentals] = useState(0);
+  
+  // Statistics states
+  const [stats, setStats] = useState({
+    revenueToday: 0,
+    revenueMonth: 0,
+    totalCars: 0,
+    activeOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
     fetchRecentTransactions();
     fetchLatestOrder();
     fetchCarRentalStats();
+    fetchStats();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoadingStats(true);
+      
+      // Fetch multiple stats in parallel
+      const [revenueTodayRes, totalCarsRes, ordersRes] = await Promise.all([
+        statsApi.getRevenueToday().catch(() => ({ data: { total: 0 } })),
+        carApi.getAll({ page_size: 1000 }).catch(() => ({ data: { count: 0 } })),
+        orderApi.getAll({ page_size: 100 }).catch(() => ({ data: { results: [] } })),
+      ]);
+      
+      const orders = ordersRes.data.results || ordersRes.data || [];
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      // Calculate stats
+      const revenueToday = revenueTodayRes.data?.total || 0;
+      
+      // Revenue this month
+      const revenueMonth = orders
+        .filter(o => o && o.created_at && new Date(o.created_at) >= startOfMonth)
+        .reduce((sum, o) => sum + (o.total_price || 0), 0);
+      
+      // Count orders by status
+      const activeOrders = orders.filter(o => o?.status === 'processing' || o?.status === 'reserved').length;
+      const pendingOrders = orders.filter(o => o?.status === 'pending').length;
+      const completedOrders = orders.filter(o => o?.status === 'completed' || o?.status === 'paid').length;
+      
+      setStats({
+        revenueToday,
+        revenueMonth,
+        totalCars: totalCarsRes.data?.count || 0,
+        activeOrders,
+        pendingOrders,
+        completedOrders,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const fetchRecentTransactions = async () => {
     try {
@@ -182,8 +241,78 @@ const Dashboard = () => {
     );
   }
 
+  // Format currency to VND
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Revenue Today */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Doanh thu hôm nay</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{loadingStats ? "..." : formatCurrency(stats.revenueToday)}</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Revenue Month */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Doanh thu tháng này</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{loadingStats ? "..." : formatCurrency(stats.revenueMonth)}</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Cars */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Tổng số xe</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{loadingStats ? "..." : stats.totalCars}</p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders Status */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Đơn hàng</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {loadingStats ? "..." : `${stats.pendingOrders} chờ | ${stats.activeOrders} đang xử lý`}
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+              <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Details Rental Card */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
@@ -458,7 +587,7 @@ const Dashboard = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-none p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-300">Recent Transaction</h2>
-          <Link to="/dashboard/orders" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors duration-300">
+          <Link to={joinTenantPath(tenantPrefix, "/dashboard/orders")} className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors duration-300">
             View All
           </Link>
         </div>

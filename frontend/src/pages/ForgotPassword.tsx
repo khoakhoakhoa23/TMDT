@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import authApi from "../api/authApi";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 // Floating Input Component với animation
 function FloatingInput({ id, name, type, placeholder, disabled, error, register, label }) {
@@ -156,6 +157,8 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -182,7 +185,7 @@ export default function ForgotPassword() {
   };
 
   const handleBackToLogin = () => {
-    window.location.href = "/login";
+    window.location.href = joinTenantPath(tenantPrefix, "/login");
   };
 
   return (
@@ -244,7 +247,7 @@ export default function ForgotPassword() {
                 <p className="text-gray-600 dark:text-gray-400 animate-[fadeIn_0.5s_ease-out_0.5s_both]">
                   Nhớ mật khẩu rồi?{" "}
                   <Link
-                    to="/login"
+                    to={joinTenantPath(tenantPrefix, "/login")}
                     className="text-cyan-600 dark:text-cyan-400 font-semibold hover:text-cyan-700 dark:hover:text-cyan-300 transition-all duration-300 hover:underline inline-flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

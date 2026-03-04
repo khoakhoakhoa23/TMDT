@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import authApi from "../api/authApi";
+import { getTenantPrefixFromPathname, joinTenantPath } from "../utils/tenantPaths";
 
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const tenantPrefix = getTenantPrefixFromPathname(location.pathname);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -49,7 +52,7 @@ export default function ResetPassword() {
       await authApi.resetPassword(token, data.new_password, data.confirm_password);
       setSuccess(true);
       setTimeout(() => {
-        navigate("/login");
+        navigate(joinTenantPath(tenantPrefix, "/login"));
       }, 2000);
     } catch (err) {
       const errorMessage =
@@ -264,7 +267,7 @@ export default function ResetPassword() {
 
             <div className="text-center">
               <Link
-                to="/login"
+                to={joinTenantPath(tenantPrefix, "/login")}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors duration-300"
               >
                 Quay lại đăng nhập
